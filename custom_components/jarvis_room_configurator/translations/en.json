@@ -1,0 +1,14 @@
+{
+  "title": "Jarvis Room Configurator",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Jarvis Room Configurator",
+        "description": "Install the optional configurator. This version does not change ESPHome devices or zones."
+      }
+    },
+    "abort": {
+      "already_configured": "Jarvis Room Configurator is already configured."
+    }
+  }
+}
