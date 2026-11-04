@@ -1,14 +1,14 @@
 {
   "domain": "jarvis_room_configurator",
   "name": "Jarvis Room Configurator",
-  "version": "0.6.0",
-  "documentation": "https://github.com/martijnkoot/jarvis-room-configurator",
-  "issue_tracker": "https://github.com/martijnkoot/jarvis-room-configurator/issues",
+  "after_dependencies": ["esphome"],
   "codeowners": [],
   "config_flow": true,
+  "dependencies": ["http"],
+  "documentation": "https://github.com/martijnkoot/jarvis-room-configurator",
   "integration_type": "helper",
   "iot_class": "local_push",
-  "dependencies": ["http"],
-  "after_dependencies": ["esphome"],
-  "requirements": []
+  "issue_tracker": "https://github.com/martijnkoot/jarvis-room-configurator/issues",
+  "requirements": [],
+  "version": "0.6.0"
 }
