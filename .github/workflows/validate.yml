@@ -1,0 +1,44 @@
+
+name: Validate Jarvis Room Configurator
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Validate integration structure
+        run: |
+          test -f hacs.json
+          test -f README.md
+          test -f custom_components/jarvis_room_configurator/manifest.json
+
+      - name: Validate JSON
+        run: |
+          python -m json.tool hacs.json > /dev/null
+          python -m json.tool \
+            custom_components/jarvis_room_configurator/manifest.json \
+            > /dev/null
+
+      - name: Compile Python files
+        run: |
+          python -m compileall -q \
+            custom_components/jarvis_room_configurator
+
+      - name: Check JavaScript syntax
+        run: |
+          find custom_components/jarvis_room_configurator \
+            -name '*.js' -exec node --check {} \;
+
