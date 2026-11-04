@@ -2,13 +2,13 @@
   "domain": "jarvis_room_configurator",
   "name": "Jarvis Room Configurator",
   "version": "0.6.0",
+  "documentation": "https://github.com/martijnkoot/jarvis-room-configurator",
+  "issue_tracker": "https://github.com/martijnkoot/jarvis-room-configurator/issues",
   "codeowners": [],
   "config_flow": true,
   "integration_type": "helper",
   "iot_class": "local_push",
-  "dependencies": [],
-  "after_dependencies": [
-    "esphome"
-  ],
+  "dependencies": ["http"],
+  "after_dependencies": ["esphome"],
   "requirements": []
 }
