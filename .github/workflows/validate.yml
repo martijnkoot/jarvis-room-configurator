@@ -5,59 +5,32 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-
-      - name: Validate integration structure
-        run: |
-          test -f hacs.json
-          test -f README.md
-          test -f custom_components/jarvis_room_configurator/manifest.json
-
-      - name: Validate JSON
-        run: |
-          python -m json.tool hacs.json > /dev/null
-          python -m json.tool \
-            custom_components/jarvis_room_configurator/manifest.json \
-            > /dev/null
-
-      - name: Compile Python files
-        run: |
-          python -m compileall -q \
-            custom_components/jarvis_room_configurator
-
       - name: Check JavaScript syntax
-        run: |
-          find custom_components/jarvis_room_configurator \
-            -name '*.js' -exec node --check {} \;
-
+        run: node --check dist/jarvis-room-configurator.js
+      - name: Test standalone dashboard module
+        run: node --test tests/*.test.cjs
+      - name: Test packaging and frontend contracts
+        run: python -m unittest discover -s tests -v
 
   validate-hacs:
-    name: Marketplace / HACS validation
+    name: Marketplace / HACS plugin validation
     runs-on: ubuntu-latest
     steps:
-      - name: HACS validation
-        uses: hacs/action@main
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
         with:
-          category: integration
-
-  validate-hassfest:
-    name: Home Assistant Hassfest validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Hassfest validation
-        uses: home-assistant/actions/hassfest@master
-
+          category: plugin

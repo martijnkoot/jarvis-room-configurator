@@ -2,7 +2,7 @@
 from pathlib import Path
 import unittest
 ROOT=Path(__file__).resolve().parents[1]
-CARD=ROOT/'custom_components/jarvis_room_configurator/frontend/target-card.js'
+CARD=ROOT/'dist/jarvis-room-configurator.js'
 
 class CardTests(unittest.TestCase):
     def test_card_exists(self): self.assertTrue(CARD.is_file())
@@ -30,7 +30,7 @@ class CardTests(unittest.TestCase):
         self.assertIn('smoothing_ms',source)
         self.assertIn('requestAnimationFrame',source)
     def test_versioned_documentation(self):
-        self.assertIn('v0.6.0',(ROOT/'README.md').read_text())
+        self.assertIn('v0.7.0',(ROOT/'README.md').read_text())
 
     def test_trail_configuration_and_fading(self):
         source=CARD.read_text()

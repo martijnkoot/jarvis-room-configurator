@@ -1,4 +1,4 @@
-/* Jarvis Room Configurator v0.6.0 - LD2460 local-coordinate zone editor.
+/* Jarvis Room Configurator v0.7.0 - LD2460 local-coordinate zone editor.
  * Own implementation; no third-party frontend source code copied.
  * Zone data is stored by ESPHome text entities (mm), not by this card.
  */
