@@ -25,7 +25,7 @@ class JarvisTargetCard extends HTMLElement {
       ha-card{padding:16px} h3{margin:0 0 8px;font-size:18px} svg{width:100%;display:block;max-height:520px;touch-action:none;background:var(--secondary-background-color,#f5f5f5);border-radius:8px;cursor:crosshair}
       .fov-layer{pointer-events:none}.hardware-fov{fill:#0891b2;fill-opacity:.08;stroke:#0891b2;stroke-width:1.5}.fov-arc,.fov-direction{fill:none;stroke:#0891b2;stroke-opacity:.55;stroke-width:1;stroke-dasharray:3 4}.configured-sector{fill:none;stroke:#64748b;stroke-width:2;stroke-dasharray:7 4}
       .grid{stroke:var(--divider-color,#bbb);stroke-width:.6}.label{fill:var(--primary-text-color,#111);font-size:12px}.target{fill:#eca923;stroke:#222;stroke-width:1.2}.trail{fill:none;stroke:#eab308;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-      polygon.zone{fill-opacity:.15;stroke-width:2}polygon.zone.occupied{fill-opacity:.30;stroke-width:3}polygon.exclusion{fill:#e35b5b;fill-opacity:.15;stroke:#e35b5b;stroke-width:2;stroke-dasharray:5 3} .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px 12px;margin:10px 0;font-size:12px}.legend-item{display:flex;align-items:center;gap:7px}.swatch{width:13px;height:13px;border-radius:3px;flex:none;border:1px solid currentColor}.legend small{color:var(--secondary-text-color,#666)}
+      polygon.zone{fill-opacity:.15;stroke-width:2}polygon.zone.occupied{fill-opacity:.30;stroke-width:3}polygon.exclusion{fill:#e35b5b;fill-opacity:.15;stroke:#e35b5b;stroke-width:2;stroke-dasharray:5 3} .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px 12px;margin:10px 0;font-size:12px}.legend-item{display:flex;align-items:center;gap:7px}.swatch{width:13px;height:13px;border-radius:3px;flex:none;border:1px solid currentColor}.legend .fov-info{grid-column:1 / -1}.legend small{color:var(--secondary-text-color,#666)}
       .vertex{fill:#fff;stroke:#227db5;stroke-width:2;cursor:move}.tools{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;align-items:center}select,button{font:inherit;padding:5px 8px}button:disabled{opacity:.45}
       .status{font-size:12px;color:var(--secondary-text-color,#666);margin-top:8px;overflow-wrap:anywhere}.error{color:#c83737}.active{background:#2d7d97;color:white}
     </style><ha-card><h3></h3><div class="tools"><label>Zone <select id="zone"></select></label><button id="draw">Draw new</button><button id="finish">Finish</button><button id="clear">Clear</button><button id="reload">Reload</button><button id="save">Apply to ESPHome</button></div><svg viewBox="0 0 360 360" role="img" aria-label="LD2460 radar field of view, live targets and polygon editor"></svg><div class="legend" id="legend" aria-live="polite"></div><div class="status" id="status"></div></ha-card>`;
@@ -75,7 +75,7 @@ class JarvisTargetCard extends HTMLElement {
       label.textContent=z.kind==='zone'?`Detection ${z.n}: ${z.count===null?'count unavailable':z.count+' target(s)'}`:`Exclusion ${z.n}`;
       item.append(swatch,label);legend.append(item);
     }
-    if(this._config.show_fov){const info=document.createElement('small');info.textContent=this._fovDescription();legend.append(info);}
+    if(this._config.show_fov){const info=document.createElement('small');info.className='fov-info';info.textContent=this._fovDescription();legend.append(info);}
     if(!zones.length){const info=document.createElement('small');info.textContent='No configured polygons found';legend.append(info);}
   }
   _parse(value){
