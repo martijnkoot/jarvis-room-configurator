@@ -119,3 +119,46 @@ asset, use the exact filename `jarvis-room-configurator.js` from `dist/`.
 ## License
 
 See [LICENSE](LICENSE). No SmartHomeShop source is included.
+
+## Radar field of view (feature; no new release)
+
+The cyan fan is a **schematic hardware envelope**, separate from detection and
+exclusion polygons. It defaults to 6 m and 120° (±60°), based on
+[Hi-Link's LD2460 specifications](https://www.hlktech.com/en/Goods-345.html).
+A circular sector is an approximation, not a measured coverage boundary: motion,
+stationary presence, edge angles, mounting, enclosure and obstructions affect
+actual detection. It must not be used as evidence that a person will be detected.
+
+```yaml
+show_fov: true       # false hides the fan and its legend
+fov_range: 6         # metres, >0..6; visual hardware-envelope assumption
+fov_angle: 120       # degrees, >0..120; visual hardware-envelope assumption
+```
+
+The origin is the radar's local `(0, 0)` position, forward is +Y, and positive
+bearing points toward +X. The fan is centred on +Y with metre arcs and a direction
+arrow. Both flips apply to every point, including arcs and the arrow. There is
+no separate world-position or rotation setting: this is a single-radar local
+view. Adding an independent rotation would misalign the raw target coordinates.
+`range` still changes display scale only. The existing square viewport can crop
+the fan (especially with the default 5 m scale); the legend explicitly warns
+about this. No automatic rescaling changes target positions or editing behavior.
+
+A dashed grey sector additionally shows **configured radar limits**, when all
+three unique `number.<prefix>*tracking_radar_detection_distance`,
+`*tracking_radar_detection_start_angle` and `*tracking_radar_detection_end_angle`
+entities exist with valid units (`m`/`cm`/`mm`, and `°`). Limits must fit side-mode
+bounds: >0..6 m and -60° ≤ start < end ≤ 60°. Missing, unavailable, ambiguous or
+invalid values omit only this grey sector; they never change the hardware fan.
+It is neither an occupancy polygon nor a guarantee of coverage.
+
+The inspected ESPHome `tracking-ld2460.yaml` exposes these names; its component
+publishes detection-range replies to the number entities, validates side-mode
+limits above, and calculates target bearing as `atan2(x, y)`. The installation
+mode select uses raw values `side` and `top`. A unique
+`select.<prefix>*tracking_radar_installation_mode` must report `side` if present;
+otherwise FOV rendering is suppressed, including for ambiguous/unavailable modes.
+If absent, the existing card's side-mount assumption is used. Installation height
+and downward tilt are deliberately not treated as horizontal bearing: ceiling
+and floor-plane projection remain unsupported. Custom renamed entities may
+prevent automatic discovery. No settings are sent to ESPHome by this feature.
