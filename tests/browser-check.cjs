@@ -2,14 +2,15 @@
 const {spawn}=require('node:child_process');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const profile=fs.mkdtempSync(path.join(os.tmpdir(),'jrc-browser-'));
-const chrome=spawn(process.env.CHROME_BIN||'google-chrome',['--headless','--no-sandbox','--disable-gpu','--remote-debugging-port=0',`--user-data-dir=${profile}`,'--allow-file-access-from-files','about:blank'],{stdio:'ignore'});
-let socket;
-const deadline=setTimeout(()=>{console.error('Browser validation timed out');socket?.close();chrome.kill();process.exitCode=1;},45000);
+const chrome=spawn(process.env.CHROME_BIN||'google-chrome',['--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--remote-debugging-port=0',`--user-data-dir=${profile}`,'--allow-file-access-from-files','about:blank'],{stdio:['ignore','ignore','pipe']});
+let socket,startError='',diagnostics='';
+chrome.stderr.on('data',chunk=>{diagnostics=(diagnostics+chunk.toString()).slice(-4000);});
+const deadline=setTimeout(()=>{console.error('Browser validation timed out');socket?.close();chrome.kill();process.exitCode=1;},60000);
 const pause=()=>new Promise(r=>setTimeout(r,100));
 (async()=>{try{
- chrome.on('error',e=>{console.error(e.message);process.exitCode=1;});
- let port;for(let i=0;i<80;i++){try{port=fs.readFileSync(path.join(profile,'DevToolsActivePort'),'utf8').split('\n')[0];break;}catch{await pause();}}
- if(!port)throw Error('Chrome did not start. Set CHROME_BIN.');
+ chrome.on('error',e=>{startError=e.message;});
+ let port;for(let i=0;i<300;i++){if(startError||chrome.exitCode!==null)break;try{port=fs.readFileSync(path.join(profile,'DevToolsActivePort'),'utf8').split('\n')[0];break;}catch{await pause();}}
+ if(!port)throw Error(`Chrome did not start within 30s (exit=${chrome.exitCode}). ${startError} ${diagnostics}`);
  const tabs=await(await fetch(`http://localhost:${port}/json`)).json();
  socket=new WebSocket(tabs.find(t=>t.type==='page').webSocketDebuggerUrl);await new Promise(r=>socket.onopen=r);
  let id=0;const pending=new Map();socket.onmessage=e=>{const m=JSON.parse(e.data);if(m.id){pending.get(m.id)(m);pending.delete(m.id);}};
@@ -18,7 +19,7 @@ const pause=()=>new Promise(r=>setTimeout(r,100));
   await send('Emulation.setDeviceMetricsOverride',{width,height:1400,deviceScaleFactor:1,mobile:false});
   await send('Page.navigate',{url:require('node:url').pathToFileURL(path.join(__dirname,fixture)).href});
   let output='';for(let i=0;i<80;i++){
-   const r=await send('Runtime.evaluate',{expression:"document.querySelector('#results')?.textContent",returnByValue:true});output=r.result?.result?.value||'';
+   const r=await send('Runtime.evaluate',{expression:`location.pathname.endsWith('/${fixture}') ? document.querySelector('#results')?.textContent : ''`,returnByValue:true});output=r.result?.result?.value||'';
    if(output.includes('FAIL')||output.includes('PASS Finished'))break;await pause();
   }
   if(output.includes('FAIL')||!output.includes('PASS Finished'))throw Error(output||'Fixture did not complete');

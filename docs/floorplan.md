@@ -161,6 +161,10 @@ existing radar settings remain owned by ESPHome.
   poses/flips, mixed units, live gates, unavailable/empty/out-of-range slots,
   ceiling suppression, invalid drafts, Lovelace echo/serialization, preservation
   of unknown options and zero HA service calls. Existing radar regressions pass.
+- GitHub push validation and HACS checks passed initially. The PR runner hit
+  the inherited 8-second Chrome startup deadline; the runner now allows 30 s,
+  reports startup diagnostics, avoids shared-memory pressure and checks fixture
+  navigation before accepting results.
 - Desktop/mobile screenshots inspected locally. No HA instance connected, no
   ESPHome commands, no production dashboard edited. Browser simulation does not
   establish physical radar accuracy or real Lovelace persistence; calibration and
