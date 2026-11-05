@@ -1,0 +1,44 @@
+<!doctype html><meta charset="utf-8"><title>Floorplan acceptance fixture</title>
+<style>body{font:16px system-ui;margin:12px;background:#eee}jarvis-floorplan-card,jarvis-floorplan-card-editor{display:block;background:white;max-width:1200px;margin:auto}#results{white-space:pre-wrap}</style>
+<jarvis-floorplan-card></jarvis-floorplan-card><jarvis-floorplan-card-editor></jarvis-floorplan-card-editor><pre id="results">RUNNING</pre>
+<script src="../dist/jarvis-room-configurator.js"></script>
+<script>
+const results=[],check=(ok,message)=>{if(!ok)throw Error(message);results.push('PASS '+message);};
+try{
+ const card=document.querySelector('jarvis-floorplan-card'),editor=document.querySelector('jarvis-floorplan-card-editor');
+ let saved,events=0,calls=[];
+ const config={...JarvisFloorplanCard.getStubConfig(),grid_options:{columns:'full'},unknown:{keep:true}};
+ card.setConfig(config);editor.setConfig(config);
+ editor.addEventListener('config-changed',e=>{saved=e.detail.config;events++;editor.setConfig(saved);card.setConfig(saved);});
+ const state=(v,u)=>({state:String(v),attributes:{unit_of_measurement:u}}),hass={states:{'sensor.test_x':state(100,'cm'),'sensor.test_y':state(2000,'mm')},callService:(...a)=>calls.push(a)};
+ editor.hass=card.hass=hass;
+ const svg=card.shadowRoot.querySelector('svg');
+ check(svg.getBoundingClientRect().width>250,'floorplan visible');
+ check(document.documentElement.scrollWidth<=innerWidth,'floorplan and controls fit viewport');
+ check(svg.querySelectorAll('[data-sensor]').length===2,'two independent sensors');
+ check(svg.querySelector('[data-layer=targets]').children.length===0,'uncalibrated live targets blocked');
+ const input=editor.shadowRoot.querySelector('[data-field=x]');input.value=7;input.dispatchEvent(new Event('change'));
+ check(saved.placements[0].x===7&&saved.placements[1].x===config.placements[1].x,'position editing isolated per sensor');
+ check(saved.grid_options.columns==='full'&&saved.unknown.keep,'unknown configuration preserved');
+ check(editor.shadowRoot.querySelector('[data-field=x]')===input,'HA editor echo retains focused controls');
+ const height=editor.shadowRoot.querySelector('[data-field=height]');height.value=1.7;height.dispatchEvent(new Event('change'));
+ const before=events;input.value='';input.dispatchEvent(new Event('change'));check(events===before,'invalid draft does not emit');input.value=7;
+ const dimensions=editor.shadowRoot.querySelector('#dimensions');dimensions.checked=true;dimensions.dispatchEvent(new Event('change'));
+ const calibrated=editor.shadowRoot.querySelector('[data-field=calibrated]');calibrated.checked=true;calibrated.dispatchEvent(new Event('change'));
+ const hardware=editor.shadowRoot.querySelector('#hardware');hardware.value=JSON.stringify({kantoor:{axes_confirmed:true,flip_x:false,flip_y:false,targets:[{x_entity:'sensor.test_x',y_entity:'sensor.test_y'}]}});editor.shadowRoot.querySelector('#apply-hardware').click();
+ check(card.shadowRoot.querySelector('[data-layer=targets]').querySelectorAll('circle').length===1,'calibrated explicit mixed-unit target plotted');
+ const expected=floorToMap(floorProject(saved.placements[0],saved.hardware.kantoor,1,2)),dot=card.shadowRoot.querySelector('.target');check(Math.hypot(+dot.getAttribute('cx')-expected[0],+dot.getAttribute('cy')-expected[1])<1e-8,'live target shares pose transformation');
+ hass.states['sensor.test_x']=state('unavailable','cm');card.hass=hass;check(!card.shadowRoot.querySelector('.target'),'unavailable target removed immediately');
+ for(const [x,y]of [[0,0],[7,1]]){hass.states['sensor.test_x']=state(x,'m');hass.states['sensor.test_y']=state(y,'m');card.hass=hass;check(!card.shadowRoot.querySelector('.target'),'empty or out-of-range target omitted');}
+ hass.states['sensor.test_x']=state(1,'m');hass.states['sensor.test_y']=state(2,'m');card.hass=hass;
+ const mounting=editor.shadowRoot.querySelector('[data-field=mounting]');mounting.value='ceiling';mounting.dispatchEvent(new Event('change'));
+ check(saved.placements[0].calibrated===false&&!card.shadowRoot.querySelector('.target'),'pose changes invalidate calibration and ceiling suppresses projection');
+ mounting.value='wall';mounting.dispatchEvent(new Event('change'));
+ const restored=document.createElement('jarvis-floorplan-card');restored.setConfig(JSON.parse(JSON.stringify(saved)));check(JSON.stringify(restored._config)===JSON.stringify(saved),'Lovelace save/recreation round trip');
+ const p=floorToMap([7,8]),screen=new DOMPoint(...p).matrixTransform(editor._preview.shadowRoot.querySelector('svg').getScreenCTM()),back=editor._point({clientX:screen.x,clientY:screen.y});check(Math.hypot(back[0]-7,back[1]-8)<1e-6,'inverse screen transform maps metre coordinates');
+ check(calls.length===0,'floorplan never calls HA services');
+ window.floorTest={editor,card,getSaved:()=>saved};
+ check(true,'Finished');
+}catch(e){results.push('FAIL '+e.stack);}
+document.querySelector('#results').textContent=results.join('\n');
+</script>
