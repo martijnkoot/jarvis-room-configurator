@@ -1,5 +1,7 @@
 # Jarvis Room Configurator v0.7.0
 
+![Jarvis Room Configurator logo](docs/icon.png)
+
 An optional Home Assistant Marketplace / HACS **Dashboard plugin** for existing
 ESPHome LD2460 roomnodes. No Python integration, configuration flow or Helper is
 required. This migration retains the existing target card and its configuration.
