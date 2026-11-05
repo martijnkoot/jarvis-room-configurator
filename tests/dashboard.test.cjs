@@ -10,13 +10,13 @@ function load(){
   vm.runInContext(`{${source}}`,context);
   const card=new (registry.get('jarvis-target-card'))();
   card._build=()=>{};card._render=()=>{};card._status=()=>{};
-  card.setConfig({entity_prefix:'sensor.office_'});
+  card.setConfig({entity_prefix:'sensor.office_',range:5});
   return {card,context,registry};
 }
 const state=(value,unit)=>({state:String(value),attributes:{unit_of_measurement:unit}});
 test('loads without backend, imports or network; registration is idempotent',()=>{
  const {context,registry}=load();vm.runInContext(`{${source}}`,context);
- assert.equal(registry.size,1);assert.equal(context.window.customCards.length,1);
+ assert.equal(registry.size,2);assert.equal(context.window.customCards.length,1);
 });
 test('reads targets in metres, centimetres and millimetres; rejects unavailable units',()=>{
  const {card}=load();card.hass={states:{
@@ -109,3 +109,17 @@ test('drawing and vertex dragging retain raw coordinates under both flips',()=>{
  card._svgPoint=()=>card._transform(-1,3);card._pointerMove({preventDefault(){}});card._pointerUp();
  assert.equal(card._serialize(card._draft),'-1000:3000');assert.equal(card._drag,-1);
  }});
+test('display settings validate independently and retain asymmetric geometry',()=>{
+ const {card}=load();
+ for(const values of [{display_start_angle:30,display_end_angle:20},{display_min_range:6},{display_min_range:-1},{display_end_angle:61},{display_size:'huge'},{display_start_angle:NaN}])assert.throws(()=>card.setConfig({entity_prefix:'sensor.office_',...values}));
+ card.setConfig({entity_prefix:'sensor.office_',display_start_angle:-15,display_end_angle:55,display_min_range:1,fov_range:4,display_size:'full'});
+ assert.equal(card.getGridOptions().columns,'full');
+ const arc=card._sectorPoints(4,-15,55);
+ assert.ok(Math.abs(card._inverse(...arc[0])[0]-4*Math.sin(-Math.PI/12))<1e-9);
+ assert.ok(Math.abs(card._inverse(...arc[64])[0]-4*Math.sin(55*Math.PI/180))<1e-9);
+});
+test('default viewport fits full six metre fan horizontally with equal axis scale',()=>{
+ const {card}=load();card.setConfig({entity_prefix:'sensor.office_'});
+ const points=card._sectorPoints(6,-60,60);assert.ok(points.every(([x,y])=>x>=-144&&x<=504&&y>=12&&y<=348));
+ assert.ok(Math.abs((card._transform(1,0)[0]-card._transform(0,0)[0])-(card._transform(0,0)[1]-card._transform(0,1)[1]))<1e-9);
+});

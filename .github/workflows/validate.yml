@@ -23,6 +23,8 @@ jobs:
         run: node --check dist/jarvis-room-configurator.js
       - name: Test standalone dashboard module
         run: node --test tests/*.test.cjs
+      - name: Test real browser layout and editor
+        run: CHROME_BIN=google-chrome node tests/browser-check.cjs
       - name: Test packaging and frontend contracts
         run: python -m unittest discover -s tests -v
 
