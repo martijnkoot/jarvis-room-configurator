@@ -6,10 +6,12 @@ class JarvisTargetCard extends HTMLElement {
   constructor() { super(); this.attachShadow({mode:'open'}); this._draft = null; this._selection='zone:1'; this._drawing=false; this._drag=-1; this._targetPos=new Map(); this._trails=new Map(); this._lastFrame=0; this._raf=0; this._pendingStatus=false; }
   setConfig(config) {
     if (typeof config.entity_prefix !== 'string' || !config.entity_prefix.startsWith('sensor.')) throw new Error('entity_prefix must start with sensor.');
-    this._config={title:'Jarvis — LD2460',range:5,flip_x:false,flip_y:false,smoothing_ms:180,trail_seconds:8,...config};
+    this._config={title:'Jarvis — LD2460',range:5,flip_x:false,flip_y:false,smoothing_ms:180,trail_seconds:8,show_fov:true,fov_range:6,fov_angle:120,...config};
     if (!Number.isFinite(+this._config.range)||+this._config.range<=0) throw new Error('range must be positive');
     if (!Number.isFinite(+this._config.smoothing_ms)||+this._config.smoothing_ms<0||+this._config.smoothing_ms>2000) throw new Error('smoothing_ms must be 0..2000');
     if (!Number.isFinite(+this._config.trail_seconds)||+this._config.trail_seconds<0||+this._config.trail_seconds>60) throw new Error('trail_seconds must be 0..60');
+    for(const [key,max] of [['fov_range',6],['fov_angle',120]]) if(typeof this._config[key] !== 'number'||!Number.isFinite(this._config[key])||this._config[key]<=0||this._config[key]>max) throw new Error(`${key} must be >0 and <=${max}`);
+    if(typeof this._config.show_fov !== 'boolean') throw new Error('show_fov must be boolean');
     this._trails.clear(); this._targetPos.clear();
     for (const key of ['flip_x','flip_y']) if (typeof this._config[key] !== 'boolean') throw new Error(`${key} must be boolean`);
     this._build(); if(this._hass) this._render();
@@ -21,11 +23,12 @@ class JarvisTargetCard extends HTMLElement {
   _build(){
     this.shadowRoot.innerHTML=`<style>
       ha-card{padding:16px} h3{margin:0 0 8px;font-size:18px} svg{width:100%;display:block;max-height:520px;touch-action:none;background:var(--secondary-background-color,#f5f5f5);border-radius:8px;cursor:crosshair}
+      .fov-layer{pointer-events:none}.hardware-fov{fill:#0891b2;fill-opacity:.08;stroke:#0891b2;stroke-width:1.5}.fov-arc,.fov-direction{fill:none;stroke:#0891b2;stroke-opacity:.55;stroke-width:1;stroke-dasharray:3 4}.configured-sector{fill:none;stroke:#64748b;stroke-width:2;stroke-dasharray:7 4}
       .grid{stroke:var(--divider-color,#bbb);stroke-width:.6}.label{fill:var(--primary-text-color,#111);font-size:12px}.target{fill:#eca923;stroke:#222;stroke-width:1.2}.trail{fill:none;stroke:#eab308;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
       polygon.zone{fill-opacity:.15;stroke-width:2}polygon.zone.occupied{fill-opacity:.30;stroke-width:3}polygon.exclusion{fill:#e35b5b;fill-opacity:.15;stroke:#e35b5b;stroke-width:2;stroke-dasharray:5 3} .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px 12px;margin:10px 0;font-size:12px}.legend-item{display:flex;align-items:center;gap:7px}.swatch{width:13px;height:13px;border-radius:3px;flex:none;border:1px solid currentColor}.legend small{color:var(--secondary-text-color,#666)}
       .vertex{fill:#fff;stroke:#227db5;stroke-width:2;cursor:move}.tools{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;align-items:center}select,button{font:inherit;padding:5px 8px}button:disabled{opacity:.45}
       .status{font-size:12px;color:var(--secondary-text-color,#666);margin-top:8px;overflow-wrap:anywhere}.error{color:#c83737}.active{background:#2d7d97;color:white}
-    </style><ha-card><h3></h3><div class="tools"><label>Zone <select id="zone"></select></label><button id="draw">Draw new</button><button id="finish">Finish</button><button id="clear">Clear</button><button id="reload">Reload</button><button id="save">Apply to ESPHome</button></div><svg viewBox="0 0 360 360" role="img" aria-label="Live LD2460 targets and polygon editor"></svg><div class="legend" id="legend" aria-live="polite"></div><div class="status" id="status"></div></ha-card>`;
+    </style><ha-card><h3></h3><div class="tools"><label>Zone <select id="zone"></select></label><button id="draw">Draw new</button><button id="finish">Finish</button><button id="clear">Clear</button><button id="reload">Reload</button><button id="save">Apply to ESPHome</button></div><svg viewBox="0 0 360 360" role="img" aria-label="LD2460 radar field of view, live targets and polygon editor"></svg><div class="legend" id="legend" aria-live="polite"></div><div class="status" id="status"></div></ha-card>`;
     this.shadowRoot.querySelector('h3').textContent=this._config.title;
     const select=this.shadowRoot.querySelector('#zone');
     for(let kind of ['zone','exclusion']) for(let n=1;n<=(kind==='zone'?4:2);n++){const option=document.createElement('option');option.value=`${kind}:${n}`;option.textContent=`${kind==='zone'?'Detection':'Exclusion'} ${n}`;select.append(option);}
@@ -72,6 +75,7 @@ class JarvisTargetCard extends HTMLElement {
       label.textContent=z.kind==='zone'?`Detection ${z.n}: ${z.count===null?'count unavailable':z.count+' target(s)'}`:`Exclusion ${z.n}`;
       item.append(swatch,label);legend.append(item);
     }
+    if(this._config.show_fov){const info=document.createElement('small');info.textContent=this._fovDescription();legend.append(info);}
     if(!zones.length){const info=document.createElement('small');info.textContent='No configured polygons found';legend.append(info);}
   }
   _parse(value){
@@ -105,6 +109,56 @@ class JarvisTargetCard extends HTMLElement {
     catch(err){this._status(`Could not save: ${err.message||err}`,true);}finally{button.disabled=false;this._render();}
   }
   _el(svg,tag,attrs={},txt){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));if(txt!==undefined)el.textContent=txt;svg.append(el);return el;}
+  // Radar-local coordinates: origin (0,0), forward +Y, positive angle toward +X.
+  // Sample curves in metres, then use the same transform as targets and polygons.
+  _sectorPoints(distance,start,end){
+    return Array.from({length:65},(_,i)=>{const a=(start+(end-start)*i/64)*Math.PI/180;return this._transform(distance*Math.sin(a),distance*Math.cos(a));});
+  }
+  _radarEntity(domain,suffix){
+    const ids=Object.keys(this._hass?.states||{}).filter(id=>id.startsWith(`${domain}.${this._prefix()}`)&&id.endsWith(suffix));
+    return ids.length===1?this._hass.states[ids[0]]:null;
+  }
+  _configuredSector(){
+    const values=['distance','start_angle','end_angle'].map((key,i)=>{
+      const s=this._radarEntity('number',`tracking_radar_detection_${key}`);
+      if(!s||String(s.state).trim()===''||!Number.isFinite(Number(s.state)))return NaN;
+      const unit=s.attributes?.unit_of_measurement;
+      const factor=i===0?({m:1,cm:.01,mm:.001}[unit]):unit==='°'?1:undefined;
+      return factor===undefined?NaN:Number(s.state)*factor;
+    });
+    const [distance,start,end]=values;
+    return distance>0&&distance<=6&&start>=-60&&end<=60&&start<end?{distance,start,end}:null;
+  }
+  _sideMount(){
+    const mode=this._radarEntity('select','tracking_radar_installation_mode');
+    const ids=Object.keys(this._hass?.states||{}).filter(id=>id.startsWith(`select.${this._prefix()}`)&&id.endsWith('tracking_radar_installation_mode'));
+    return ids.length===0||(ids.length===1&&mode?.state==='side');
+  }
+  _fovDescription(){
+    if(!this._sideMount())return 'Radar FOV hidden: mounting mode unavailable or not Side; ceiling projection is unsupported.';
+    const c=this._configuredSector();
+    return `Cyan: schematic hardware FOV ${this._config.fov_range} m / ${this._config.fov_angle}°, forward +Y (not guaranteed coverage). Dashed grey: ${c?`ESPHome radar limits ${c.distance} m, ${c.start}° to ${c.end}°`:'radar limits unavailable or ambiguous'}. Polygons are separate occupancy zones. View may crop coverage; range sets display scale only.`;
+  }
+  _drawFov(svg){
+    if(!this._config.show_fov||!this._sideMount())return;
+    const layer=this._el(svg,'g',{'data-layer':'fov',class:'fov-layer','pointer-events':'none'});
+    const el=(tag,attrs,txt)=>this._el(layer,tag,attrs,txt);
+    const origin=this._transform(0,0);
+    const path=(r,a,b,closed=false)=>`${closed?'M '+origin.join(' ')+' L ':'M '}${this._sectorPoints(r,a,b).map(p=>p.join(' ')).join(' L ')}${closed?' Z':''}`;
+    const radius=this._config.fov_range,half=this._config.fov_angle/2;
+    el('path',{d:path(radius,-half,half,true),class:'hardware-fov'});
+    for(let r=1;r<=radius;r++){
+      el('path',{d:path(r,-half,half),class:'fov-arc'});
+      const [x,y]=this._transform(0,r);
+      el('text',{x:x+4,y:y-4,class:'label'},`${r} m`);
+    }
+    const tip=this._transform(0,Math.min(radius,.45));
+    el('line',{x1:origin[0],y1:origin[1],x2:tip[0],y2:tip[1],class:'fov-direction'});
+    const arrow=[[-.08,Math.min(radius,.45)-.12],[0,Math.min(radius,.45)],[.08,Math.min(radius,.45)-.12]].map(p=>this._transform(...p).join(',')).join(' ');
+    el('polyline',{points:arrow,class:'fov-direction'});
+    const configured=this._configuredSector();
+    if(configured)el('path',{d:path(configured.distance,configured.start,configured.end,true),class:'configured-sector'});
+  }
   _readTargets(){const prefix=this._config.entity_prefix.toLowerCase();const pairs=new Map();for(const [id,state] of Object.entries(this._hass?.states||{})){
       if(!id.startsWith(prefix))continue;const m=id.match(/^(.*(?:tracking_)?target_([1-5]))_(x|y)$/);if(!m)continue;if(!pairs.has(m[2]))pairs.set(m[2],{});pairs.get(m[2])[m[3]]=state;
     }
@@ -116,6 +170,7 @@ class JarvisTargetCard extends HTMLElement {
   _render(){const svg=this.shadowRoot.querySelector('svg');if(!svg||!this._hass)return;svg.replaceChildren();const el=(tag,attrs,txt)=>this._el(svg,tag,attrs,txt);
     const range=+this._config.range;for(let i=-Math.floor(range);i<=Math.floor(range);i++){const [px]=this._transform(i,0);if(px>=12&&px<=348)el('line',{x1:px,y1:12,x2:px,y2:348,class:'grid'});}
     for(let i=0;i<=Math.floor(range);i++){const [,py]=this._transform(0,i);if(py>=12&&py<=348)el('line',{x1:12,y1:py,x2:348,y2:py,class:'grid'});}
+    this._drawFov(svg);
     const palette=['#16a34a','#2563eb','#a855f7','#ea580c'];
     const legendZones=[];
     for(const kind of ['zone','exclusion'])for(let n=1;n<=(kind==='zone'?4:2);n++){
