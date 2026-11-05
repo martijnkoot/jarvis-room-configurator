@@ -2,16 +2,47 @@
  * Own implementation; no third-party frontend source code copied.
  * Zone data is stored by ESPHome text entities (mm), not by this card.
  */
+// All display fields are independent of device entities and polygon coordinates.
+const displayFields=[
+ ['display_start_angle','Left boundary (°, radar-local)',-60,60,1],
+ ['display_end_angle','Right boundary (°, radar-local)',-60,60,1],
+ ['display_min_range','Minimum distance (m)',0,6,.1],
+ ['fov_range','Maximum distance (m)',.1,6,.1],
+ ['range','Viewport scale (m)',1,30,.1]
+];
+function validateDisplay(c){
+ for(const [key,,min,max] of displayFields){const v=c[key];if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max)throw Error(`${key} must be ${min}..${max}`);}
+ if(c.display_start_angle>=c.display_end_angle)throw Error('Left angle must be less than right angle.');
+ if(c.display_min_range>=c.fov_range)throw Error('Minimum distance must be less than maximum distance.');
+ if(!['standard','large','full'].includes(c.display_size))throw Error('Invalid display size.');
+}
+function displayControls(root,config,onChange){
+ root.innerHTML='<p>Schematic display only. Does not program LD2460 or change occupancy polygons. Angles: 0° forward, positive toward +X; flips mirror the drawing.</p>';
+ for(const [key,label,min,max,step] of displayFields){
+  const row=document.createElement('label');row.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0';row.textContent=label+' ';
+  const number=document.createElement('input'),slider=document.createElement('input');
+  for(const [input,type] of [[number,'number'],[slider,'range']]){input.type=type;input.min=min;input.max=max;input.step=step;input.value=config[key];input.setAttribute('aria-label',label+(type==='range'?' slider':''));row.append(input);}
+  number.style.width='85px';slider.style.cssText='width:140px;max-width:100%';root.append(row);
+  for(const input of [number,slider])input.oninput=()=>{number.value=slider.value=input.value;commit(key,input.value===''?NaN:Number(input.value));};
+ }
+ const size=document.createElement('select');size.setAttribute('aria-label','Display size');
+ for(const value of ['standard','large','full']){const o=document.createElement('option');o.value=value;o.textContent=value;size.append(o);}size.value=config.display_size;root.append(size);
+ size.onchange=()=>commit('display_size',size.value);
+ const error=document.createElement('p');error.setAttribute('role','status');root.append(error);
+ let draft={...config};
+ function commit(key,value){draft={...draft,[key]:value};try{validateDisplay(draft);error.textContent='';onChange({...draft});}catch(e){error.textContent=e.message;}}
+}
 class JarvisTargetCard extends HTMLElement {
   constructor() { super(); this.attachShadow({mode:'open'}); this._draft = null; this._selection='zone:1'; this._drawing=false; this._drag=-1; this._targetPos=new Map(); this._trails=new Map(); this._lastFrame=0; this._raf=0; this._pendingStatus=false; }
   setConfig(config) {
     if (typeof config.entity_prefix !== 'string' || !config.entity_prefix.startsWith('sensor.')) throw new Error('entity_prefix must start with sensor.');
-    this._config={title:'Jarvis — LD2460',range:5,flip_x:false,flip_y:false,smoothing_ms:180,trail_seconds:8,show_fov:true,fov_range:6,fov_angle:120,...config};
+    this._config={title:'Jarvis — LD2460',range:6,flip_x:false,flip_y:false,smoothing_ms:180,trail_seconds:8,show_fov:true,fov_range:6,fov_angle:120,display_start_angle:-(config.fov_angle??120)/2,display_end_angle:(config.fov_angle??120)/2,display_min_range:0,display_size:'standard',...config};
     if (!Number.isFinite(+this._config.range)||+this._config.range<=0) throw new Error('range must be positive');
     if (!Number.isFinite(+this._config.smoothing_ms)||+this._config.smoothing_ms<0||+this._config.smoothing_ms>2000) throw new Error('smoothing_ms must be 0..2000');
     if (!Number.isFinite(+this._config.trail_seconds)||+this._config.trail_seconds<0||+this._config.trail_seconds>60) throw new Error('trail_seconds must be 0..60');
     for(const [key,max] of [['fov_range',6],['fov_angle',120]]) if(typeof this._config[key] !== 'number'||!Number.isFinite(this._config[key])||this._config[key]<=0||this._config[key]>max) throw new Error(`${key} must be >0 and <=${max}`);
     if(typeof this._config.show_fov !== 'boolean') throw new Error('show_fov must be boolean');
+    validateDisplay(this._config);
     this._trails.clear(); this._targetPos.clear();
     for (const key of ['flip_x','flip_y']) if (typeof this._config[key] !== 'boolean') throw new Error(`${key} must be boolean`);
     this._build(); if(this._hass) this._render();
@@ -19,16 +50,26 @@ class JarvisTargetCard extends HTMLElement {
   set hass(hass) { this._hass=hass; if (this._config) this._render(); }
   connectedCallback(){ if(this._config&&!this._raf) this._animate(0); }
   disconnectedCallback(){ if(this._raf) cancelAnimationFrame(this._raf); this._raf=0; }
-  getCardSize(){ return 8; }
+  static getConfigElement(){return document.createElement('jarvis-target-card-editor');}
+  getCardSize(){ return this._config?.display_size==='standard'?12:16; }
+  getGridOptions(){return {columns:this._config?.display_size==='full'?'full':12,rows:'auto',min_columns:6};}
   _build(){
     this.shadowRoot.innerHTML=`<style>
-      ha-card{padding:16px} h3{margin:0 0 8px;font-size:18px} svg{width:100%;display:block;max-height:520px;touch-action:none;background:var(--secondary-background-color,#f5f5f5);border-radius:8px;cursor:crosshair}
+      :host{display:block;min-width:0}ha-card{display:block;padding:16px;box-sizing:border-box}details{margin:12px 0}input,select{font:inherit}input[type=range]{vertical-align:middle}  h3{margin:0 0 8px;font-size:18px} svg{width:100%;display:block;touch-action:none;background:var(--secondary-background-color,#f5f5f5);border-radius:8px;cursor:crosshair}
       .fov-layer{pointer-events:none}.hardware-fov{fill:#0891b2;fill-opacity:.08;stroke:#0891b2;stroke-width:1.5}.fov-arc,.fov-direction{fill:none;stroke:#0891b2;stroke-opacity:.55;stroke-width:1;stroke-dasharray:3 4}.configured-sector{fill:none;stroke:#64748b;stroke-width:2;stroke-dasharray:7 4}
       .grid{stroke:var(--divider-color,#bbb);stroke-width:.6}.label{fill:var(--primary-text-color,#111);font-size:12px}.target{fill:#eca923;stroke:#222;stroke-width:1.2}.trail{fill:none;stroke:#eab308;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
       polygon.zone{fill-opacity:.15;stroke-width:2}polygon.zone.occupied{fill-opacity:.30;stroke-width:3}polygon.exclusion{fill:#e35b5b;fill-opacity:.15;stroke:#e35b5b;stroke-width:2;stroke-dasharray:5 3} .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px 12px;margin:10px 0;font-size:12px}.legend-item{display:flex;align-items:center;gap:7px}.swatch{width:13px;height:13px;border-radius:3px;flex:none;border:1px solid currentColor}.legend .fov-info{grid-column:1 / -1}.legend small{color:var(--secondary-text-color,#666)}
       .vertex{fill:#fff;stroke:#227db5;stroke-width:2;cursor:move}.tools{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;align-items:center}select,button{font:inherit;padding:5px 8px}button:disabled{opacity:.45}
       .status{font-size:12px;color:var(--secondary-text-color,#666);margin-top:8px;overflow-wrap:anywhere}.error{color:#c83737}.active{background:#2d7d97;color:white}
-    </style><ha-card><h3></h3><div class="tools"><label>Zone <select id="zone"></select></label><button id="draw">Draw new</button><button id="finish">Finish</button><button id="clear">Clear</button><button id="reload">Reload</button><button id="save">Apply to ESPHome</button></div><svg viewBox="0 0 360 360" role="img" aria-label="LD2460 radar field of view, live targets and polygon editor"></svg><div class="legend" id="legend" aria-live="polite"></div><div class="status" id="status"></div></ha-card>`;
+    </style><ha-card><h3></h3><details><summary>Display sector settings</summary><div id="display-controls"></div><p>Preview only here. To retain changes, use Edit dashboard → Edit card → Display settings, then Save.</p></details><div class="tools"><label>Zone <select id="zone"></select></label><button id="draw">Draw new</button><button id="finish">Finish</button><button id="clear">Clear</button><button id="reload">Reload</button><button id="save">Apply to ESPHome</button></div><svg viewBox="-156 0 672 360" role="img" aria-label="LD2460 radar field of view, live targets and polygon editor"></svg><div class="legend" id="legend" aria-live="polite"></div><div class="status" id="status"></div></ha-card>`;
+    const svgSize={standard:760,large:1100,full:1600}[this._config.display_size];
+    this.shadowRoot.querySelector('svg').style.cssText=`max-width:${svgSize}px;margin:auto`;
+    displayControls(this.shadowRoot.querySelector('#display-controls'),this._config,c=>{
+      if(c.range!==this._config.range){this._trails.clear();this._targetPos.clear();}
+      this._config=c;
+      this.shadowRoot.querySelector('svg').style.maxWidth={standard:760,large:1100,full:1600}[c.display_size]+'px';
+      this._render();
+    });
     this.shadowRoot.querySelector('h3').textContent=this._config.title;
     const select=this.shadowRoot.querySelector('#zone');
     for(let kind of ['zone','exclusion']) for(let n=1;n<=(kind==='zone'?4:2);n++){const option=document.createElement('option');option.value=`${kind}:${n}`;option.textContent=`${kind==='zone'?'Detection':'Exclusion'} ${n}`;select.append(option);}
@@ -137,7 +178,7 @@ class JarvisTargetCard extends HTMLElement {
   _fovDescription(){
     if(!this._sideMount())return 'Radar FOV hidden: mounting mode unavailable or not Side; ceiling projection is unsupported.';
     const c=this._configuredSector();
-    return `Cyan: schematic hardware FOV ${this._config.fov_range} m / ${this._config.fov_angle}°, forward +Y (not guaranteed coverage). Dashed grey: ${c?`ESPHome radar limits ${c.distance} m, ${c.start}° to ${c.end}°`:'radar limits unavailable or ambiguous'}. Polygons are separate occupancy zones. View may crop coverage; range sets display scale only.`;
+    return `Cyan: schematic display sector ${this._config.display_min_range}–${this._config.fov_range} m / ${this._config.display_start_angle}° to ${this._config.display_end_angle}°, forward +Y (not guaranteed coverage). Dashed grey: ${c?`ESPHome radar limits ${c.distance} m, ${c.start}° to ${c.end}°`:'radar limits unavailable or ambiguous'}. Polygons are separate occupancy zones. View may crop coverage; range sets display scale only.`;
   }
   _drawFov(svg){
     if(!this._config.show_fov||!this._sideMount())return;
@@ -145,10 +186,11 @@ class JarvisTargetCard extends HTMLElement {
     const el=(tag,attrs,txt)=>this._el(layer,tag,attrs,txt);
     const origin=this._transform(0,0);
     const path=(r,a,b,closed=false)=>`${closed?'M '+origin.join(' ')+' L ':'M '}${this._sectorPoints(r,a,b).map(p=>p.join(' ')).join(' L ')}${closed?' Z':''}`;
-    const radius=this._config.fov_range,half=this._config.fov_angle/2;
-    el('path',{d:path(radius,-half,half,true),class:'hardware-fov'});
-    for(let r=1;r<=radius;r++){
-      el('path',{d:path(r,-half,half),class:'fov-arc'});
+    const radius=this._config.fov_range,start=this._config.display_start_angle,end=this._config.display_end_angle;
+    const outer=this._sectorPoints(radius,start,end),inner=this._sectorPoints(this._config.display_min_range,start,end).reverse();
+    el('path',{d:'M '+[...outer,...inner].map(p=>p.join(' ')).join(' L ')+' Z',class:'hardware-fov'});
+    for(let r=Math.max(1,Math.ceil(this._config.display_min_range));r<=radius;r++){
+      el('path',{d:path(r,start,end),class:'fov-arc'});
       const [x,y]=this._transform(0,r);
       el('text',{x:x+4,y:y-4,class:'label'},`${r} m`);
     }
@@ -168,8 +210,8 @@ class JarvisTargetCard extends HTMLElement {
     }return {coords,found};
   }
   _render(){const svg=this.shadowRoot.querySelector('svg');if(!svg||!this._hass)return;svg.replaceChildren();const el=(tag,attrs,txt)=>this._el(svg,tag,attrs,txt);
-    const range=+this._config.range;for(let i=-Math.floor(range);i<=Math.floor(range);i++){const [px]=this._transform(i,0);if(px>=12&&px<=348)el('line',{x1:px,y1:12,x2:px,y2:348,class:'grid'});}
-    for(let i=0;i<=Math.floor(range);i++){const [,py]=this._transform(0,i);if(py>=12&&py<=348)el('line',{x1:12,y1:py,x2:348,y2:py,class:'grid'});}
+    const range=+this._config.range;for(let i=-Math.floor(range);i<=Math.floor(range);i++){const [px]=this._transform(i,0);if(px>=-144&&px<=504)el('line',{x1:px,y1:12,x2:px,y2:348,class:'grid'});}
+    for(let i=0;i<=Math.floor(range);i++){const [,py]=this._transform(0,i);if(py>=12&&py<=348)el('line',{x1:-144,y1:py,x2:504,y2:py,class:'grid'});}
     this._drawFov(svg);
     const palette=['#16a34a','#2563eb','#a855f7','#ea580c'];
     const legendZones=[];
@@ -195,7 +237,7 @@ class JarvisTargetCard extends HTMLElement {
     this.shadowRoot.querySelector('#draw').classList.toggle('active',this._drawing);
     if(!this._drawing&&!this._pendingStatus){const status=this.shadowRoot.querySelector('#status');status.textContent=`${coords.size} target(s) visible · ${found} X/Y pairs · ${resolved||'Zone text entity not found'} · Drag blue vertices; Draw new to replace polygon.`;}
   }
-  _makeTarget(parent,id,x,y){const el=(tag,attrs,text)=>{const o=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const[k,v]of Object.entries(attrs))o.setAttribute(k,v);if(text)o.textContent=text;parent.append(o);};if(x<12||x>348||y<12||y>348)return;el('circle',{cx:x,cy:y,r:7,class:'target'});el('text',{x:x+10,y:y-8,class:'label'},`T${id}`);}
+  _makeTarget(parent,id,x,y){const el=(tag,attrs,text)=>{const o=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const[k,v]of Object.entries(attrs))o.setAttribute(k,v);if(text)o.textContent=text;parent.append(o);};if(x<-144||x>504||y<12||y>348)return;el('circle',{cx:x,cy:y,r:7,class:'target'});el('text',{x:x+10,y:y-8,class:'label'},`T${id}`);}
   _drawTrail(layer,points,now,duration){
     if(points.length<2)return;
     for(let i=1;i<points.length;i++){
@@ -243,6 +285,20 @@ class JarvisTargetCard extends HTMLElement {
     this._raf=requestAnimationFrame(t=>this._animate(t));
   }
 }
+class JarvisTargetCardEditor extends HTMLElement {
+ constructor(){super();this.attachShadow({mode:'open'});}
+ setConfig(config){
+  if(this._lastEmitted===JSON.stringify(config))return;
+  const card=new JarvisTargetCard();card._build=()=>{};card.setConfig(config);
+  this.shadowRoot.innerHTML='<h3>Display settings</h3><p>Changes preview alongside this editor. Save the dashboard card to persist them.</p><div></div>';
+  displayControls(this.shadowRoot.querySelector('div'),card._config,c=>{
+   // Preserve every unrelated option, including grid_options, prefix and flips.
+   const next={...config,...c};this._lastEmitted=JSON.stringify(next);
+   this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:next},bubbles:true,composed:true}));
+  });
+ }
+}
+if(!customElements.get('jarvis-target-card-editor'))customElements.define('jarvis-target-card-editor',JarvisTargetCardEditor);
 if(!customElements.get('jarvis-target-card'))customElements.define('jarvis-target-card',JarvisTargetCard);
 window.customCards=window.customCards||[];
 if(!window.customCards.some(x=>x.type==='jarvis-target-card'))window.customCards.push({type:'jarvis-target-card',name:'Jarvis Room Configurator',description:'LD2460 live targets and polygon editor'});

@@ -1,0 +1,41 @@
+<!doctype html><meta charset="utf-8"><title>Local radar acceptance fixture</title>
+<style>body{font:16px system-ui;margin:16px;background:#eee}jarvis-target-card{display:block;background:white;max-width:1200px;margin:auto}#results{white-space:pre-wrap}</style>
+<jarvis-target-card></jarvis-target-card><jarvis-target-card-editor></jarvis-target-card-editor><pre id="results">RUNNING</pre>
+<script src="../dist/jarvis-room-configurator.js"></script>
+<script>
+(async()=>{
+ const results=[],check=(ok,message)=>{if(!ok)throw Error(message);results.push('PASS '+message);};
+ try{
+ const card=document.querySelector('jarvis-target-card'),editor=document.querySelector('jarvis-target-card-editor');
+ const config={type:'custom:jarvis-target-card',entity_prefix:'sensor.office_',flip_x:true,flip_y:false,grid_options:{columns:'full'},display_size:'large'};
+ card.setConfig(config);
+ const state=(v,u)=>({state:String(v),attributes:{unit_of_measurement:u}}),calls=[];
+ card.hass={states:{'number.office_tracking_radar_detection_distance':state(4,'m'),'number.office_tracking_radar_detection_start_angle':state(-20,'°'),'number.office_tracking_radar_detection_end_angle':state(40,'°'),'sensor.office_target_1_x':state(1,'m'),'sensor.office_target_1_y':state(2,'m'),'text.office_polygon_zone_1':state('0:0;2000:1000;0:3000'),'sensor.office_polygon_zone_1_target_count':state(1)},callService:async(...a)=>calls.push(a)};
+ card.connectedCallback();
+ const svg=card.shadowRoot.querySelector('svg');
+ check(svg.getBoundingClientRect().width>250,'responsive SVG is visible');
+ check(document.documentElement.scrollWidth<=innerWidth,'no horizontal overflow');
+ const p=card._transform(1,2),screen=new DOMPoint(...p).matrixTransform(svg.getScreenCTM()),back=card._svgPoint({clientX:screen.x,clientY:screen.y});
+ check(Math.hypot(back[0]-p[0],back[1]-p[1])<.001,'screen pointer maps correctly at this viewport');
+ check(svg.querySelector('.hardware-fov')&&svg.querySelector('.configured-sector')&&svg.querySelector('polygon.occupied'),'dual sectors and firmware occupancy coexist');
+ const root=card.shadowRoot.querySelector('#display-controls');
+ const number=root.querySelector('input[type=number]');number.value=-25;number.dispatchEvent(new Event('input'));
+ check(card._config.display_start_angle===-25&&calls.length===0,'in-card live preview is display-only');
+ let saved,events=0;editor.setConfig(config);editor.addEventListener('config-changed',e=>{saved=e.detail.config;events++;editor.setConfig(saved);card.setConfig(saved);});
+ const field=editor.shadowRoot.querySelector('input[type=number]');field.value=-30;field.dispatchEvent(new Event('input'));
+ check(saved.display_start_angle===-30&&saved.flip_x&&saved.grid_options.columns==='full','editor emits full config preserving unrelated options');
+ check(editor.shadowRoot.querySelector('input[type=number]')===field,'editor echo retains active controls for slider dragging');
+ const ranges=editor.shadowRoot.querySelectorAll('input[type=range]');ranges[1].value=45;ranges[1].dispatchEvent(new Event('input'));
+ check(saved.display_end_angle===45,'slider previews independent right boundary');
+ const before=events;field.value=55;field.dispatchEvent(new Event('input'));check(events===before,'invalid crossed boundaries never emit');
+ const restored=document.createElement('jarvis-target-card');restored.setConfig(JSON.parse(JSON.stringify(saved)));
+ check(restored._config.display_start_angle===-30&&restored._config.display_end_angle===45,'serialized Lovelace configuration survives recreation');
+ check(calls.length===0,'display edits never call HA services');
+ const selected=card._selection;card._draft=[[0,0],[1,1],[2,0]];await card._apply();
+ check(calls.length===1&&calls[0][0]==='text'&&calls[0][2].value==='0:0;1000:1000;2000:0'&&card._selection===selected,'Apply retains selected polygon millimetre semantics');
+ card.shadowRoot.querySelector('details').open=true;editor.remove();
+ check(document.documentElement.scrollWidth<=innerWidth,'expanded settings fit viewport');
+ }catch(e){results.push('FAIL '+e.stack);}
+ document.querySelector('#results').textContent=results.join('\n');
+})();
+</script>

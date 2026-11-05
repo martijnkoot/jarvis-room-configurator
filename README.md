@@ -26,7 +26,7 @@ as a JavaScript module. Reload the browser after changing resources.
 type: custom:jarvis-target-card
 title: Kantoor — LD2460
 entity_prefix: sensor.kantoor_
-range: 5
+range: 6
 flip_x: true
 flip_y: true
 smoothing_ms: 180
@@ -122,7 +122,7 @@ See [LICENSE](LICENSE). No SmartHomeShop source is included.
 
 ## Radar field of view (feature; no new release)
 
-The cyan fan is a **schematic hardware envelope**, separate from detection and
+The cyan fan is a **schematic display sector**, separate from detection and
 exclusion polygons. It defaults to 6 m and 120° (±60°), based on
 [Hi-Link's LD2460 specifications](https://www.hlktech.com/en/Goods-345.html).
 A circular sector is an approximation, not a measured coverage boundary: motion,
@@ -131,25 +131,24 @@ actual detection. It must not be used as evidence that a person will be detected
 
 ```yaml
 show_fov: true       # false hides the fan and its legend
-fov_range: 6         # metres, >0..6; visual hardware-envelope assumption
-fov_angle: 120       # degrees, >0..120; visual hardware-envelope assumption
+fov_range: 6         # metres, >0..6; schematic display only
+fov_angle: 120       # legacy symmetric fallback; explicit boundaries take precedence
 ```
 
 The origin is the radar's local `(0, 0)` position, forward is +Y, and positive
-bearing points toward +X. The fan is centred on +Y with metre arcs and a direction
-arrow. Both flips apply to every point, including arcs and the arrow. There is
+bearing points toward +X. The default fan is centred on +Y with metre arcs and a direction
+arrow; explicit left/right boundaries can make it asymmetric. Both flips apply to every point, including arcs and the arrow. There is
 no separate world-position or rotation setting: this is a single-radar local
 view. Adding an independent rotation would misalign the raw target coordinates.
-`range` still changes display scale only. The existing square viewport can crop
-the fan (especially with the default 5 m scale); the legend explicitly warns
-about this. No automatic rescaling changes target positions or editing behavior.
+`range` still changes display scale only. The wide viewport fits the default six-metre fan without cropping. Explicit smaller
+scales can still crop it; there is no automatic rescaling.
 
 A dashed grey sector additionally shows **configured radar limits**, when all
 three unique `number.<prefix>*tracking_radar_detection_distance`,
 `*tracking_radar_detection_start_angle` and `*tracking_radar_detection_end_angle`
 entities exist with valid units (`m`/`cm`/`mm`, and `°`). Limits must fit side-mode
 bounds: >0..6 m and -60° ≤ start < end ≤ 60°. Missing, unavailable, ambiguous or
-invalid values omit only this grey sector; they never change the hardware fan.
+invalid values omit only this grey sector; they never change the display sector.
 It is neither an occupancy polygon nor a guarantee of coverage.
 
 The inspected ESPHome `tracking-ld2460.yaml` exposes these names; its component
@@ -162,3 +161,81 @@ If absent, the existing card's side-mount assumption is used. Installation heigh
 and downward tilt are deliberately not treated as horizontal bearing: ceiling
 and floor-plane projection remain unsupported. Custom renamed entities may
 prevent automatic discovery. No settings are sent to ESPHome by this feature.
+
+
+## Responsive display and persistent sector settings (feature; no release)
+
+The card uses a wide SVG viewport with equal X/Y scale and inverse screen
+coordinates for pointer editing. It fills its available container up to 760 px
+by default, 1100 px for `large`, or 1600 px for `full`. The old 520 px height cap
+is removed. Mobile controls wrap and the drawing shrinks proportionally.
+Existing explicit `range` values retain their scale; omitted `range` now defaults
+to 6 m. This is groundwork for a floorplan, not yet floorplan or multi-sensor support.
+
+Open **Display sector settings** in the card for temporary live preview. For
+persistent changes, use **Edit dashboard → Edit card → Display settings**, adjust
+the same numeric fields/sliders, and **Save** the card/dashboard. The editor emits
+Home Assistant's standard `config-changed` event containing the entire configuration;
+it preserves unknown keys, flips, entities and layout settings. Reloading restores
+saved Lovelace configuration, not temporary in-card previews. It does not use local
+storage, guessed dashboard paths, private HA objects, or direct dashboard writes.
+In YAML-managed dashboards, save these fields in the dashboard YAML instead.
+
+```yaml
+type: custom:jarvis-target-card
+entity_prefix: sensor.office_
+display_size: large             # standard | large | full
+range: 6                       # viewport scale, 1..30 m, not detection range
+display_start_angle: -45        # left boundary, -60..60 degrees
+display_end_angle: 30           # right boundary, -60..60; must exceed left
+display_min_range: 0.5          # display-only inner radius, 0..6 m
+fov_range: 5                    # outer radius, >0..6 m; must exceed inner
+```
+
+Angles are radar-local: 0° is +Y and positive is toward +X. `flip_x` mirrors the
+apparent left/right direction; it does not rewrite angle values or device coordinates.
+Legacy `fov_angle` supplies symmetric defaults only when explicit boundaries are absent.
+Invalid/nonfinite numbers, crossed boundaries and minimum ≥ maximum are rejected;
+invalid form drafts never update the preview or saved configuration. Editing the
+sector does not clip/filter targets, trails, polygon editing or firmware occupancy.
+
+**Dashboard width is owned by Home Assistant.** `display_size` increases the drawing
+cap; it cannot break out of a narrow parent column. In a Sections dashboard, the
+card requests 12 columns by default and `full` columns for `display_size: full`;
+existing explicit Layout/grid options override the request. Use HA's Layout tab
+and widen the containing section as needed. For full dashboard width use a Panel
+view containing this card. A Masonry column or nested stack still constrains width.
+See [HA card sizing and editor contract](https://developers.home-assistant.io/docs/frontend/custom-ui/custom-card/).
+
+### LD2460 capabilities and separation
+
+Inspection of Jarvis's vendored LD2460 driver at commit
+`da1af1ff02de5fc6c80a1a3dc654e3ea605ff06a` found:
+
+- `roomnode/vendor/ld2460/components/ld2460/ld2460.cpp`,
+  `send_set_detection_range_command_`: command `0x11` encodes maximum distance
+  in decimetres and independent signed start/end angles in tenths of a degree.
+- `validate_detection_range_`: Side allows 0.1–6 m and
+  −60° ≤ start < end ≤ 60°; Top allows 0.1–4 m and 0° ≤ start < end ≤ 360°.
+- `number/__init__.py` exposes distance and both angles. Its generic angle
+  bounds cover both mounting modes; they are not proof of Side-mode support
+  beyond ±60°. Query `0x12` publishes reported limits back to number entities.
+- There is no minimum-distance parameter in this command or inspected schema.
+
+Thus maximum distance and independent angles are programmable in the inspected
+firmware, but **these new controls intentionally configure the schematic display
+only**. We did not verify physical hardware behavior. Hi-Link's nominal specification
+is not a coverage guarantee. Top projection remains unsupported and suppresses both
+sector overlays as before. The grey overlay reads the device's current Side limits.
+The cyan display, grey reported device limits and occupancy polygons are independent.
+**Apply to ESPHome still writes only the selected polygon text entity in millimetres**;
+it never sends display settings or `number.set_value`.
+
+### Validation
+
+Run `node --check dist/jarvis-room-configurator.js`, `node --test tests/*.test.cjs`
+and `python3 -m unittest discover -s tests -v`. For real DOM, pointer-transform,
+responsive-layout and editor round-trip checks, run
+`CHROME_BIN=/path/to/chrome node tests/browser-check.cjs`.
+The fixture uses synthetic HA state and a service recorder; it never connects to HA.
+See [validation results and limits](docs/responsive-display-validation.md).
