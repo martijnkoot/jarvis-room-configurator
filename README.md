@@ -93,8 +93,9 @@ only served the old JavaScript URL. Removing this plugin does not send any
 commands or erase device polygons. Remove its dashboard cards and resource too.
 See [ADR-001](docs/ADR-001-independence.md).
 
-The view assumes side/wall mounting with forward-positive Y. Ceiling projection,
-floor plans and multi-sensor calibration are not implemented. Automated tests
+The existing radar view assumes side/wall mounting with forward-positive Y.
+Ceiling projection remains unsupported. A separate ground-floor prototype is
+now available; see the floorplan section below. Automated tests
 cover standalone loading and core behavior with simulated Home Assistant states;
 they do not establish real browser rendering, HACS installation or firmware
 persistence. Verify these in a test installation before production migration.
@@ -170,7 +171,8 @@ coordinates for pointer editing. It fills its available container up to 760 px
 by default, 1100 px for `large`, or 1600 px for `full`. The old 520 px height cap
 is removed. Mobile controls wrap and the drawing shrinks proportionally.
 Existing explicit `range` values retain their scale; omitted `range` now defaults
-to 6 m. This is groundwork for a floorplan, not yet floorplan or multi-sensor support.
+to 6 m. The existing radar card remains a local single-sensor view. The separate
+floorplan card below provides world placement for multiple sensors.
 
 Open **Display sector settings** in the card for temporary live preview. For
 persistent changes, use **Edit dashboard → Edit card → Display settings**, adjust
@@ -239,3 +241,17 @@ responsive-layout and editor round-trip checks, run
 `CHROME_BIN=/path/to/chrome node tests/browser-check.cjs`.
 The fixture uses synthetic HA state and a service recorder; it never connects to HA.
 See [validation results and limits](docs/responsive-display-validation.md).
+
+## Ground-floor editor (feature; no release)
+
+Add `type: custom:jarvis-floorplan-card` using the same JavaScript resource.
+The separate **Jarvis Ground Floor** card includes the Blender metre geometry,
+two independently movable/rotatable roomnodes and schematic radar sectors.
+Edit card to change poses and hardware mappings, then save Lovelace to persist.
+Kantoor/Keuken start at approximate annotated positions; height is unknown.
+Live HA targets require dimension, pose and hardware-axis confirmations.
+Ceiling mounting is recorded but ceiling/tilted projection is suppressed.
+
+See [geometry provenance, image registration, configuration and calibration](docs/floorplan.md).
+The existing radar card and its polygon-write behavior are unchanged. No HA
+installation or device settings are altered by adding this source feature.

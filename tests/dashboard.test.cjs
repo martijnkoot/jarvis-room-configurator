@@ -16,7 +16,7 @@ function load(){
 const state=(value,unit)=>({state:String(value),attributes:{unit_of_measurement:unit}});
 test('loads without backend, imports or network; registration is idempotent',()=>{
  const {context,registry}=load();vm.runInContext(`{${source}}`,context);
- assert.equal(registry.size,2);assert.equal(context.window.customCards.length,1);
+ assert.equal(registry.size,4);assert.equal(context.window.customCards.length,2);
 });
 test('reads targets in metres, centimetres and millimetres; rejects unavailable units',()=>{
  const {card}=load();card.hass={states:{

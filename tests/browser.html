@@ -35,6 +35,7 @@
  check(calls.length===1&&calls[0][0]==='text'&&calls[0][2].value==='0:0;1000:1000;2000:0'&&card._selection===selected,'Apply retains selected polygon millimetre semantics');
  card.shadowRoot.querySelector('details').open=true;editor.remove();
  check(document.documentElement.scrollWidth<=innerWidth,'expanded settings fit viewport');
+ check(true,'Finished');
  }catch(e){results.push('FAIL '+e.stack);}
  document.querySelector('#results').textContent=results.join('\n');
 })();
