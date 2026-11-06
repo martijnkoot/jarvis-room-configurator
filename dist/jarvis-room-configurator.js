@@ -478,9 +478,9 @@ class JarvisFloorplanCard extends HTMLElement {
   this._node(svg,'path',{d:'M0,5.55 H1 M0,5.48 V5.62 M1,5.48 V5.62',stroke:'#172b40','stroke-width':.025});
   this._node(svg,'text',{x:0,y:5.9,'font-size':.18},'1 m • model scale, no geographic north');
   for(const [i,s]of this._config.placements.entries()){
-   const color=i===0?'#139b32':i===1?'#245aff':'#a548b0',center=floorToMap([s.x,s.y]),tip=floorToMap(floorProject(s,{},0,.5));
+   const h=this._source(s),color=i===0?'#139b32':i===1?'#245aff':'#a548b0',center=floorToMap([s.x,s.y]),tip=floorToMap(floorProject(s,{},0,.5));
    if(s.show_fov!==false&&s.mounting==='wall'&&s.tilt===0){
-    const points=[center];for(let j=0;j<=48;j++){const a=(s.fov_start+(s.fov_end-s.fov_start)*j/48)*Math.PI/180;points.push(floorToMap(floorProject(s,this._source(s),s.fov_range*Math.sin(a),s.fov_range*Math.cos(a))));}
+    const points=[center];for(let j=0;j<=48;j++){const a=(s.fov_start+(s.fov_end-s.fov_start)*j/48)*Math.PI/180;points.push(floorToMap(floorProject(s,h,s.fov_range*Math.sin(a),s.fov_range*Math.cos(a))));}
     this._node(sectors,'polygon',{points:points.map(p=>p.join(',')).join(' '),fill:color,class:'fov'});
    }
    const g=this._node(svg,'g',{'data-sensor':s.id,class:'sensor',tabindex:0,role:'button','aria-label':`${s.name}: ${s.x.toFixed(2)}, ${s.y.toFixed(2)} m; yaw ${s.yaw} degrees`});
@@ -499,8 +499,7 @@ class JarvisFloorplanCard extends HTMLElement {
 
  }
  _source(s){return floorResolve(this._hass,this._config.hardware[s.id]||{},this._registry);}
- _reason(s){
-  const h=this._source(s);
+ _reason(s,h=this._source(s)){
   if(s.mounting!=='wall'||s.tilt!==0)return 'Ceiling/tilted projection is not yet supported; placement is saved, targets are not projected.';
   if(h.mode_entity&&this._hass?.states?.[h.mode_entity]?.state!=='side')return 'Device mounting mode is not Side. Check hardware settings in ESPHome.';
   if(!h.targets.length)return h.warnings.join(' ');
@@ -510,7 +509,7 @@ class JarvisFloorplanCard extends HTMLElement {
   if(!this._liveLayer||!this._config)return;
   this._desired=new Map();this._polygonLayer?.replaceChildren();const status=[];
   for(const [i,s]of this._config.placements.entries()){
-   const h=this._source(s),reason=this._reason(s),color=['#139b32','#245aff','#a548b0'][i%3];
+   const h=this._source(s),reason=this._reason(s,h),color=['#139b32','#245aff','#a548b0'][i%3];
    if(reason){status.push(`${s.name}: ${reason}`);continue;}
    let count=0,invalid=0;
    for(const [j,t]of h.targets.entries()){
