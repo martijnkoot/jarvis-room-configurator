@@ -529,8 +529,9 @@ class JarvisFloorplanCard extends HTMLElement {
    this._node(g,'text',{x:center[0]+.15,y:center[1]-.15,fill:color},s.name);
    if(this.hasAttribute('editing')){this._node(g,'circle',{cx:tip[0],cy:tip[1],r:.085,fill:'white',stroke:color,'stroke-width':.035,'pointer-events':'none'});this._node(g,'circle',{cx:tip[0],cy:tip[1],r:.085,fill:'white',stroke:'transparent','stroke-width':12,'vector-effect':'non-scaling-stroke','data-rotate':s.id});}
   }
-  this._polygonLayer=this._node(svg,'g',{'data-layer':'polygons','pointer-events':'none'});
+  this._polygonLayer=this._node(svg,'g',{'data-layer':'polygons'});
   this._liveLayer=this._node(svg,'g',{'data-layer':'targets','pointer-events':'none'});this._refreshLive();
+  for(const g of svg.querySelectorAll('[data-sensor]'))svg.append(g);
   for(const g of svg.querySelectorAll('[data-sensor]')){
    const open=()=>this.dispatchEvent(new CustomEvent('sensor-selected',{detail:{id:g.dataset.sensor},bubbles:true,composed:true}));
    g.onclick=()=>{if(!this.hasAttribute('editing'))this._openSensor(g.dataset.sensor);else open();};
@@ -550,7 +551,7 @@ class JarvisFloorplanCard extends HTMLElement {
   this._desired=new Map();this._polygonLayer?.replaceChildren();const status=[];
   for(const [i,s]of this._config.placements.entries()){
    const h=this._source(s),reason=this._reason(s,h),color=['#139b32','#245aff','#a548b0'][i%3];
-   if(reason){status.push(`${s.name}: ${reason}`);continue;}
+   if(reason){status.push(`${s.name}: ${reason}`);if(s.mounting!=='wall'||s.tilt!==0||(h.mode_entity&&this._hass?.states?.[h.mode_entity]?.state!=='side'))continue;}
    let count=0,invalid=0;
    for(const [j,t]of h.targets.entries()){
     const x=floorMetres(this._hass?.states?.[t.x_entity]),y=floorMetres(this._hass?.states?.[t.y_entity]);
@@ -568,7 +569,7 @@ class JarvisFloorplanCard extends HTMLElement {
    }
    for(const [key,id]of Object.entries(h.polygons)){
     const points=JarvisTargetCard.prototype._parse(this._hass?.states?.[id]?.state);
-    if(points?.length)this._node(this._polygonLayer,'polygon',{points:points.map(p=>floorToMap(floorProject(s,h,...p)).join(',')).join(' '),fill:key.startsWith('zone')?color:'#ef4444','fill-opacity':.07,stroke:key.startsWith('zone')?color:'#ef4444','stroke-width':.025,'stroke-dasharray':key.startsWith('zone')?'':'.08 .05'});
+    if(points?.length)this._node(this._polygonLayer,'polygon',{points:points.map(p=>floorToMap(floorProject(s,h,...p)).join(',')).join(' '),fill:key.startsWith('zone')?color:'#ef4444','fill-opacity':.07,stroke:key.startsWith('zone')?color:'#ef4444','stroke-width':.025,'stroke-dasharray':key.startsWith('zone')?'':'.08 .05','data-zone-sensor':s.id,'data-zone-key':key,'pointer-events':this._arranging?'visiblePainted':'none'});
    }
    const occupancy=h.occupancy?this._hass?.states?.[h.occupancy]?.state:null;
    status.push(`${s.name}: ${count} targets${occupancy?` · presence ${occupancy}`:''}${!s.calibrated?' · placement not verified':''}${invalid?' · X/Y unavailable or units missing':''}${h.warnings.length?' · '+h.warnings.join(' '):''}`);
@@ -599,19 +600,123 @@ class JarvisFloorplanCard extends HTMLElement {
   dialog.append(close,note,info);this._appendPolygonEditor(dialog,s,h);this.shadowRoot.append(dialog);dialog.showModal();
  }
  _appendPolygonEditor(root,s,h){
-  const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Edit ESPHome polygons / hardware view';details.append(summary);root.append(details);
-  const local=document.createElement('jarvis-target-card');
-  local.setConfig({...h.legacy_card,entity_prefix:h.entity_prefix||'sensor.jarvis_',title:`${s.name} — sensor-local polygons`,flip_x:!!h.flip_x,flip_y:!!h.flip_y,smoothing_ms:s.smoothing_ms??180,trail_seconds:s.trail_seconds??8,show_fov:s.show_fov??true,fov_range:s.fov_range,display_start_angle:s.fov_start,display_end_angle:s.fov_end,display_min_range:s.display_min_range??0});
-  // Use the same device resolver for renamed text and number entities.
-  local._zoneId=(kind,n)=>h.polygons[`${kind}:${n}`]||null;
-  local._zoneCount=n=>{const v=this._hass?.states?.[h.counts[n]]?.state;return v!==undefined&&v!==''&&Number.isInteger(+v)?+v:null;};
-  local._radarEntity=(domain,suffix)=>this._hass?.states?.[h[({tracking_radar_detection_distance:'distance',tracking_radar_detection_start_angle:'start_angle',tracking_radar_detection_end_angle:'end_angle',tracking_radar_installation_mode:'mode_entity'})[suffix]]];
-  local._sideMount=()=>!h.mode_entity||this._hass?.states?.[h.mode_entity]?.state==='side';
-  local._readTargets=()=>{const coords=new Map();for(const [i,t]of h.targets.entries()){const x=floorMetres(this._hass?.states?.[t.x_entity]),y=floorMetres(this._hass?.states?.[t.y_entity]);if(x!==null&&y!==null&&(x||y)&&Math.hypot(x,y)<=6)coords.set(t.id??i+1,local._transform(x,y));}return {coords,found:h.targets.length};};
-  details.ontoggle=()=>{if(details.open){details.append(local);local.hass=this._hass;}else local.remove();};
+  const note=document.createElement('p');note.textContent='Zones bewerken op de grote plattegrond: kies Inrichten in de livekaart. Hier staan alleen sensorinstellingen.';root.append(note);
  }
 
+
 }
+
+// Inverse of floorProject, including display scale and both mirrored axes.
+function floorUnproject(s,h,x,y){
+ const a=s.yaw*Math.PI/180,dx=x-s.x,dy=y-s.y,k=s.scale??1;
+ return [(dx*Math.sin(a)-dy*Math.cos(a))/k*(h.flip_x?-1:1),(dx*Math.cos(a)+dy*Math.sin(a))/k*(h.flip_y?-1:1)];
+}
+function floorZoneValue(points){
+ if(points.length!==0&&(points.length<3||points.length>20))throw Error('Gebruik 3–20 hoekpunten, of wis de hele zone.');
+ for(const [x,y]of points)if(!Number.isFinite(x)||!Number.isFinite(y)||y<0||Math.hypot(x,y)>6.001||Math.abs(Math.atan2(x,y)*180/Math.PI)>60.01)throw Error('Zone ligt buiten de LD2460-sector (6 m, −60° tot 60°).');
+ return JarvisTargetCard.prototype._serialize(points);
+}
+const floorBaseRender=JarvisFloorplanCard.prototype._render;
+const floorBaseSetConfig=JarvisFloorplanCard.prototype.setConfig;
+JarvisFloorplanCard.prototype.setConfig=function(config){
+ // External configuration always wins; never silently rebase an active draft.
+ this._arranging=false;this._zoneDraft=null;this._baseline=null;floorBaseSetConfig.call(this,config);
+};
+JarvisFloorplanCard.prototype._openSensor=function(id){this._selectedSensor=id;this._render();};
+JarvisFloorplanCard.prototype._message=function(text){this._notice=text;const n=this.shadowRoot.querySelector('#arrange-message');if(n)n.textContent=text;};
+JarvisFloorplanCard.prototype._zoneContext=function(){
+ const s=this._config.placements.find(s=>s.id===this._selectedSensor);if(!s)return null;
+ const h=this._source(s),id=h.polygons[this._zoneKey||'zone:1'];return {s,h,id};
+};
+JarvisFloorplanCard.prototype._loadZone=function(){
+ const c=this._zoneContext();this._drawingZone=false;this._zoneDraft=c?.id?(JarvisTargetCard.prototype._parse(this._hass?.states?.[c.id]?.state)||[]):[];
+ this._zoneOriginal=c?.id?this._hass?.states?.[c.id]?.state:null;this._zoneEntity=c?.id;this._vertex=null;
+};
+JarvisFloorplanCard.prototype._applyZone=async function(rollback=false){
+ const c=this._zoneContext();if(!this._arranging||!c?.id||c.id!==this._zoneEntity||this._drawingZone||this._applying)return;
+ if(c.s.mounting!=='wall'||c.s.tilt!==0||(c.h.mode_entity&&this._hass.states[c.h.mode_entity]?.state!=='side'))return this._message('Alleen wandmontage / Side zonder tilt wordt ondersteund.');
+ try{
+  const value=rollback?this._rollback?.value:floorZoneValue(this._zoneDraft||[]);
+  if(value===undefined||rollback&&this._rollback.id!==c.id)throw Error('Geen herstelwaarde voor deze entiteit.');
+  const before=this._hass.states[c.id]?.state;
+  if(before==null||['unknown','unavailable'].includes(before))throw Error('Polygon-entiteit is niet beschikbaar.');
+  if(value.length>(this._hass.states[c.id]?.attributes?.max??255))throw Error('Polygon is te lang voor deze text-entiteit. Verminder het aantal punten.');
+  if(!rollback&&before!==this._zoneOriginal)throw Error('ESPHome-zone is intussen veranderd. Herlaad voor toepassen.');
+  if(!window.confirm(`${rollback?'Herstel':'Apply to ESPHome'}: ${c.s.name}, ${this._zoneKey||'zone:1'}\n${c.id}\n${value||'(lege zone)'}\nESPHome rapporteert optimistisch. Doorgaan?`))return;
+  this._applying=true;this._render();
+  await this._hass.callService('text','set_value',{entity_id:c.id,value});
+  this._rollback={id:c.id,value:before};this._zoneOriginal=value;
+  this._message(`Verzonden naar ${c.id}; controleer de entiteit en fysieke detectie. Geen hardwarebevestiging.`);
+ }catch(e){this._message(e.message||String(e));}finally{this._applying=false;this._render();}
+};
+JarvisFloorplanCard.prototype._render=function(){
+ floorBaseRender.call(this);if(!this._config||this.hasAttribute('editing'))return;
+ const root=this.shadowRoot,card=root.querySelector('ha-card'),svg=root.querySelector('svg'),bar=root.querySelector('.map-tools');
+ bar.style.cssText='display:flex;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;padding-bottom:4px';
+ const style=document.createElement('style');style.textContent='.map-tools button{flex-shrink:0}.map-tools select{min-height:44px;max-width:100%;padding:6px;border-radius:8px}.map-tools button{min-height:44px}svg{min-height:360px}@media(max-width:600px){ha-card{padding:10px}svg{min-height:420px}}';root.append(style);
+ const button=(parent,label,fn)=>{const b=document.createElement('button');b.textContent=label;b.onclick=fn;b.disabled=!!this._applying;parent.append(b);return b;};
+ button(bar,this._arranging?'Inrichten actief':'Inrichten',()=>{if(this._arranging)return;this._notice='Lokale preview: exporteer plaatsingen om ze via de kaarteditor te bewaren. Zones pas na bevestiging naar ESPHome.';this._baseline=floorClone(this._config);this._arranging=true;this._selectedSensor=this._selectedSensor||this._config.placements[0]?.id;this._loadZone();this._render();});
+ const panel=document.createElement('div');panel.className='map-tools';panel.style.cssText='justify-content:flex-start;flex-wrap:wrap;align-items:center';card.insertBefore(panel,svg);
+ const msg=document.createElement('p');msg.id='arrange-message';msg.className='status';msg.setAttribute('role','status');msg.textContent=this._notice||'Inrichten: lokale preview. Bewaren via configuratie-export en de officiële kaarteditor. ESPHome apart toepassen.';card.insertBefore(msg,svg);
+ if(!this._arranging){if(this._selectedSensor){const c=this._zoneContext();msg.textContent=`${c.s.name} · ${c.s.mounting} · ${c.s.yaw.toFixed(1)}° · Kies Inrichten om te verplaatsen of zones te tekenen.`;}return;}
+ svg.style.touchAction='none';
+ button(bar,'Annuleren',()=>{this._config=this._baseline;this._arranging=false;this._zoneDraft=null;this._notice='Preview verworpen. Reeds toegepaste ESPHome-wijzigingen blijven bestaan; herstel ze afzonderlijk.';this._render();});
+ button(bar,'Bewaren / export',()=>{
+  const d=document.createElement('dialog'),text=document.createElement('textarea');text.value=JSON.stringify(this._config,null,2);text.style.cssText='width:100%;height:40vh';text.readOnly=true;
+  const note=document.createElement('p');note.textContent='Nog niet opgeslagen in Home Assistant. Kopieer deze volledige configuratie naar Dashboard bewerken → Kaart bewerken → Code-editor en druk daar Opslaan. JSON is geldige YAML. Zonepreviews horen niet bij deze export; gebruik daarvoor Apply to ESPHome.';
+  d.style.cssText='width:min(650px,85vw);max-height:85vh;overflow:auto';d.append(note,text);button(d,'Selecteer configuratie',()=>{text.focus();text.select();});button(d,'Download configuratie',()=>{const url=URL.createObjectURL(new Blob([text.value],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='jarvis-floorplan-config.json';a.click();URL.revokeObjectURL(url);});button(d,'Sluiten',()=>d.remove());root.append(d);d.showModal();
+ });
+ const select=document.createElement('select');select.setAttribute('aria-label','Sensor');for(const s of this._config.placements){const o=document.createElement('option');o.value=s.id;o.textContent=s.name;select.append(o);}select.value=this._selectedSensor;select.onchange=()=>{if(!window.confirm('Andere sensor selecteren? Zonepreview wordt verworpen.'))return;this._selectedSensor=select.value;this._loadZone();this._render();};panel.append(select);
+ button(panel,'Sensor plaatsen',()=>{this._zoneInteraction=false;this._drawingZone=false;this._render();});button(panel,'Zone bewerken',()=>{this._zoneInteraction=true;this._render();});
+ const c=this._zoneContext();if(!c)return;
+ const zones=document.createElement('select');zones.setAttribute('aria-label','Zone');for(const kind of ['zone','exclusion'])for(let i=1;i<=(kind==='zone'?4:2);i++){const o=document.createElement('option');o.value=`${kind}:${i}`;o.textContent=`${kind==='zone'?'Detectie':'Uitsluiting'} ${i}${c.h.polygons[o.value]?'':' (niet gekoppeld)'}`;zones.append(o);}zones.value=this._zoneKey||'zone:1';zones.onchange=()=>{if(!window.confirm('Zonepreview verwerpen en andere zone selecteren?'))return;this._zoneKey=zones.value;this._loadZone();this._render();};panel.append(zones);
+ const supported=c.s.mounting==='wall'&&c.s.tilt===0&&(!c.h.mode_entity||this._hass?.states?.[c.h.mode_entity]?.state==='side');
+ for(const [label,fn]of [
+ ['Tekenen',()=>{this._zoneInteraction=true;this._zoneDraft=[];this._drawingZone=true;this._render();}],
+ ['Gereed',()=>{try{floorZoneValue(this._zoneDraft||[]);this._drawingZone=false;this._render();}catch(e){this._message(e.message);}}],
+ ['Punt verwijderen',()=>{if(this._vertex!=null){this._zoneDraft.splice(this._vertex,1);this._vertex=null;this._render();}}],
+ ['Zone wissen',()=>{this._zoneDraft=[];this._drawingZone=false;this._render();}],
+ ['Herlaad zone',()=>{if(window.confirm('Lokale zonepreview verwerpen?')){this._loadZone();this._render();}}],
+ ['Apply to ESPHome',()=>this._applyZone()],['Herstel vorige',()=>this._applyZone(true)]
+ ])button(panel,label,fn).disabled=this._applying||!c.id||!supported;
+ const hint=document.createElement('span');hint.textContent=`${c.id||'Geen eenduidige polygon-entiteit'} · ${this._drawingZone?'Tik hoekpunten op de plattegrond':'Sleep sensor, draairing of hoekpunt'} · zonepreview niet opgeslagen`;hint.style.cssText='font-size:12px;line-height:1.4;flex-basis:100%';panel.append(hint);
+ const draw=()=>{
+  svg.querySelector('[data-zone-preview]')?.remove();const g=this._node(svg,'g',{'data-zone-preview':'true'});
+  if(!supported)return;
+  const points=(this._zoneDraft||[]).map(p=>floorToMap(floorProject(c.s,c.h,...p)));
+  this._node(g,!this._drawingZone&&points.length>=3?'polygon':'polyline',{points:points.map(p=>p.join(',')).join(' '),fill:'#0ea5e9','fill-opacity':.15,stroke:'#0284c7','stroke-width':3,'vector-effect':'non-scaling-stroke','pointer-events':'none'});
+  if(this._zoneInteraction)points.forEach(([cx,cy],i)=>this._node(g,'circle',{cx,cy,r:.045,fill:i===this._vertex?'#f59e0b':'white',stroke:'#0284c7','stroke-width':12,'vector-effect':'non-scaling-stroke','data-zone-vertex':i}));
+ };draw();
+ // Handle remains on the main canvas; properties never open a modal sidebar.
+ const tip=floorToMap(floorProject(c.s,{},0,.5));this._node(svg,'circle',{cx:tip[0],cy:tip[1],r:.06,fill:'white',stroke:'#0284c7','stroke-width':14,'vector-effect':'non-scaling-stroke','data-live-rotate':c.s.id,'pointer-events':this._zoneInteraction?'none':'all'});
+ const world=e=>{const m=svg.getScreenCTM();if(!m)return null;const p=new DOMPoint(e.clientX,e.clientY).matrixTransform(m.inverse());return floorFromMap([p.x,p.y]);};
+ const baseDown=svg.onpointerdown,baseMove=svg.onpointermove,baseUp=svg.onpointerup;
+ svg.onpointerdown=e=>{
+  if(e.button!==0||this._applying)return;if(this._panning){baseDown(e);return;}
+  const p=world(e);if(!p)return;const path=e.composedPath();
+  // SVG touch dispatch may target the SVG rather than a small circle. Resolve
+  // nearest handles in screen pixels so zoom never shrinks the touch target.
+  const nearest=selector=>{let best=null,distance=23;for(const n of svg.querySelectorAll(selector)){const q=new DOMPoint(+n.getAttribute('cx'),+n.getAttribute('cy')).matrixTransform(svg.getScreenCTM()),d=Math.hypot(q.x-e.clientX,q.y-e.clientY);if(d<distance){best=n;distance=d;}}return best;};
+  const hit=!this._zoneInteraction&&(path.find(n=>n.dataset?.liveRotate)||path.find(n=>n.dataset?.sensor)||nearest('[data-live-rotate],[data-sensor] circle:not(.selection)'));
+  const v=this._zoneInteraction?(nearest('[data-zone-vertex]')||path.find(n=>n.dataset?.zoneVertex!==undefined)):null,rotate=hit?.dataset?.liveRotate?hit:null,sensor=hit?(hit.dataset?.sensor?hit:hit.closest?.('[data-sensor]')):null;
+  if(v){this._vertex=+v.dataset.zoneVertex;this._gesture={vertex:this._vertex};}
+  else if(path.some(n=>n.dataset?.zoneKey)&&!this._drawingZone){const z=path.find(n=>n.dataset?.zoneKey);if(!window.confirm('Zonepreview verwerpen en deze zone selecteren?'))return;this._selectedSensor=z.dataset.zoneSensor;this._zoneKey=z.dataset.zoneKey;this._loadZone();this._render();return;}
+  else if((rotate||sensor)&&!this._zoneInteraction){const id=rotate?.dataset.liveRotate||sensor.dataset.sensor;if(id!==this._selectedSensor){if((this._zoneDraft?.length||0)&&!window.confirm('Zonepreview verwerpen en sensor selecteren?'))return;this._selectedSensor=id;this._loadZone();this._render();return;}this._gesture={rotate:!!rotate,dx:c.s.x-p[0],dy:c.s.y-p[1]};}
+  else if(this._drawingZone&&supported&&c.id){if(this._zoneDraft.length>=20)return this._message('Maximaal 20 hoekpunten.');this._zoneDraft.push(floorUnproject(c.s,c.h,...p));draw();return;}
+  else return;
+  this._gesture.beforePose=floorClone(c.s);this._gesture.beforeZone=floorClone(this._zoneDraft);this._gesture.pointer=e.pointerId;svg.setPointerCapture(e.pointerId);e.preventDefault();
+ };
+ svg.onpointermove=e=>{if(this._pan){baseMove(e);return;}const g=this._gesture;if(!g||g.pointer!==e.pointerId)return;const p=world(e);if(!p)return;
+  if(g.vertex!==undefined){this._zoneDraft[g.vertex]=floorUnproject(c.s,c.h,...p);draw();}
+  else{if(g.rotate)c.s.yaw=Math.atan2(p[1]-c.s.y,p[0]-c.s.x)*180/Math.PI;else{c.s.x=p[0]+g.dx;c.s.y=p[1]+g.dy;}c.s.calibrated=false;
+   // Keep pointer capture on this SVG until release. Update all projected layers on release.
+   const group=svg.querySelector(`[data-sensor="${c.s.id}"]`);const before=g.beforePose,origin=floorToMap([before.x,before.y]),now=floorToMap([c.s.x,c.s.y]);group.setAttribute('transform',`translate(${now[0]-origin[0]} ${now[1]-origin[1]}) rotate(${-(c.s.yaw-before.yaw)} ${origin[0]} ${origin[1]})`);this._message(`${c.s.name}: ${c.s.x.toFixed(2)}, ${c.s.y.toFixed(2)} m · ${c.s.yaw.toFixed(1)}° (preview)`);
+   const marker=svg.querySelector('[data-live-rotate]'),q=floorToMap(g.rotate?floorProject(c.s,{},0,.5):[c.s.x,c.s.y]);marker.setAttribute('cx',q[0]);marker.setAttribute('cy',q[1]);draw();}
+  e.preventDefault();};
+ svg.onpointerup=e=>{if(this._gesture?.pointer===e.pointerId){this._gesture=null;if(svg.hasPointerCapture(e.pointerId))svg.releasePointerCapture(e.pointerId);this._render();}else baseUp(e);};
+ svg.onpointercancel=e=>{if(this._gesture){Object.assign(c.s,this._gesture.beforePose);this._zoneDraft=this._gesture.beforeZone;}this._gesture=null;baseUp(e);this._render();};
+};
+
 class JarvisFloorplanCardEditor extends HTMLElement {
  constructor(){super();this.attachShadow({mode:'open'});this._selected='kantoor';}
  set hass(hass){this._hass=hass;if(this._preview)this._preview.hass=hass;for(const local of this.shadowRoot.querySelectorAll('jarvis-target-card'))local.hass=hass;

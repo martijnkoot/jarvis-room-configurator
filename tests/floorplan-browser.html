@@ -43,8 +43,7 @@ const results=[],check=(ok,message)=>{if(!ok)throw Error(message);results.push('
  check(card._source(saved.placements[0]).targets.length===2,'all discovered targets automatically linked');
  check(card.shadowRoot.querySelectorAll('.target').length===2,'all discovered targets immediately visible');
  check(!editor.shadowRoot.querySelector('#hardware')&&!editor.shadowRoot.querySelector('#dimensions'),'no technical mapping JSON or calibration checkbox workflow');
- const tool=editor.shadowRoot.querySelector('#polygon-tools details');check(!!tool,'polygon editor integrated in sensor panel');
- tool.open=true;tool.dispatchEvent(new Event('toggle'));check(!!tool.querySelector('jarvis-target-card'),'polygon tool opens explicitly');
+ check(!editor.shadowRoot.querySelector('jarvis-target-card'),'no second sensor-local canvas');
  const restored=document.createElement('jarvis-floorplan-card');restored.setConfig(JSON.parse(JSON.stringify(saved)));check(JSON.stringify(restored._config)===JSON.stringify(saved),'Lovelace save/recreation round trip');
  const p=floorToMap([7,8]),screen=new DOMPoint(...p).matrixTransform(editor._preview.shadowRoot.querySelector('svg').getScreenCTM()),back=editor._point({clientX:screen.x,clientY:screen.y});check(Math.hypot(back[0]-7,back[1]-8)<1e-6,'inverse screen transform maps metre coordinates');
  check(calls.length===0,'floorplan never calls HA services');
@@ -58,11 +57,17 @@ const results=[],check=(ok,message)=>{if(!ok)throw Error(message);results.push('
  check(saved.hardware.kantoor.device_id==='office'&&card._source(saved.placements[0]).targets[0].x_entity==='sensor.renamed_x','device selection resolves renamed coordinates through registry');
  check(registryCalls===2,'registry inventory shared once per connection');
  check(card.shadowRoot.querySelector('[data-layer=polygons] polygon'),'device polygon projected on map');
- const polygonTool=editor.shadowRoot.querySelector('#polygon-tools details');polygonTool.open=true;polygonTool.dispatchEvent(new Event('toggle'));
- const local=polygonTool.querySelector('jarvis-target-card');local._draft=[[0,0],[1,0],[1,1]];
- check(calls.length===0,'source discovery and polygon preview never write');
- await local._apply();check(calls.length===1&&calls[0][0]==='text'&&calls[0][1]==='set_value'&&calls[0][2].entity_id==='text.renamed_zone','explicit Apply writes only selected device polygon');
- card._openSensor('kantoor');check(card.shadowRoot.querySelector('dialog[open]'),'runtime sensor click opens integrated settings summary');card.shadowRoot.querySelector('dialog').close();
+ const press=label=>[...card.shadowRoot.querySelectorAll('button')].find(b=>b.textContent===label).click();
+ card._openSensor('kantoor');check(!card.shadowRoot.querySelector('dialog'),'sensor selection keeps map accessible');
+ press('Inrichten');check(card._arranging&&card._zoneEntity==='text.renamed_zone','runtime arranging discovers correct device zone');
+ card._zoneInteraction=true;card._zoneDraft=[[0,1],[.5,1],[.5,2]];card._render();
+ check(card.shadowRoot.querySelectorAll('[data-zone-vertex]').length===3,'zone handles on main floorplan');
+ check(calls.length===0,'arranging never writes automatically');
+ window.confirm=()=>false;await card._applyZone();check(calls.length===0,'cancel confirmation prevents hardware write');
+ window.confirm=()=>true;await card._applyZone();check(calls.length===1&&calls[0][2].entity_id==='text.renamed_zone','confirmed Apply writes selected device only');
+ press('Bewaren / export');check(card.shadowRoot.querySelector('textarea').value.includes('placements'),'explicit export contains full card configuration');card.shadowRoot.querySelector('dialog').remove();
+ press('Annuleren');check(!card._arranging,'cancel returns to live mode');
+ window.liveTest={card,hass,calls,press};
  const frame=card._raf;card.remove();check(frame&&!card._raf,'disconnection cancels animation');
  // Replacement is a draft transaction: invalid/cancelled assets must not mutate config.
  const previous=JSON.stringify(editor._config),poses=JSON.stringify(editor._config.placements),hardware=JSON.stringify(editor._config.hardware);

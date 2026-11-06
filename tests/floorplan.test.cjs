@@ -69,3 +69,25 @@ test('fit bounds include all four corners of rotated and translated images',()=>
  assert.ok(Math.abs(bounds[0]+3.8)<1e-9);assert.ok(Math.abs(bounds[1]-2.2)<1e-9);
  assert.ok(Math.abs(bounds[2]-6.6)<1e-9);assert.ok(Math.abs(bounds[3]-11.6)<1e-9);
 });
+
+test('global/local roundtrip includes scale, arbitrary headings, mirrors and map registration',()=>{
+ const {run}=load();for(const yaw of [-360,-170,-45,0,37,90,180,360])for(const flip_x of [false,true])for(const flip_y of [false,true])for(const scale of [.1,1,3.5,10]){
+ const p=run(`(()=>{const s={x:-12.3,y:45.6,yaw:${yaw},scale:${scale}},h={flip_x:${flip_x},flip_y:${flip_y}};return floorUnproject(s,h,...floorFromMap(floorToMap(floorProject(s,h,-.8,2.3))))})()`);
+ assert.ok(Math.hypot(p[0]+.8,p[1]-2.3)<1e-10);
+ }
+});
+test('zone serialization rejects invalid geometry and enforces physical FOV before write',()=>{
+ const {run}=load();assert.equal(run('floorZoneValue([[0,1],[.5,1],[0,2]])'),'0:1000;500:1000;0:2000');assert.equal(run('floorZoneValue([])'),'');
+ for(const points of ['[[0,1]]','[[0,-1],[1,1],[0,2]]','[[0,7],[1,1],[0,2]]','[[2,.1],[1,1],[0,2]]','[[NaN,1],[1,1],[0,2]]'])assert.throws(()=>run(`floorZoneValue(${points})`));
+});
+test('apply fails closed for no arrangement, changed entity, external changes, errors and unsupported mounting',async()=>{
+ const {run,c}=load();c.window.confirm=()=>true;
+ run(`var calls=[];var card=new JarvisFloorplanCard();card._render=()=>{};card._message=t=>{card.message=t};card._config=floorDefaults();card._selectedSensor='kantoor';card._zoneEntity='text.zone';card._zoneOriginal='';card._zoneDraft=[[0,1],[.5,1],[0,2]];card._source=()=>({polygons:{'zone:1':'text.zone'}});card._hass={states:{'text.zone':{state:'',attributes:{}}},callService:async(...args)=>calls.push(args)};`);
+ await run('card._applyZone()');assert.equal(run('calls.length'),0);
+ run('card._arranging=true;card._zoneEntity="text.other"');await run('card._applyZone()');assert.equal(run('calls.length'),0);
+ run('card._zoneEntity="text.zone";card._hass.states["text.zone"].state="0:0"');await run('card._applyZone()');assert.match(run('card.message'),/intussen veranderd/);
+ run('card._hass.states["text.zone"].state="";card._config.placements[0].mounting="ceiling"');await run('card._applyZone()');assert.equal(run('calls.length'),0);
+ run('card._config.placements[0].mounting="wall"');c.window.confirm=()=>false;await run('card._applyZone()');assert.equal(run('calls.length'),0);
+ c.window.confirm=()=>true;await run('card._applyZone()');assert.equal(run('calls.length'),1);assert.equal(run('card._rollback.value'),'');
+ run('card._hass.callService=async()=>{throw Error("offline")}');await run('card._applyZone(true)');assert.equal(run('card._applying'),false);assert.match(run('card.message'),/offline/);assert.equal(run('card._zoneDraft.length'),3);
+});

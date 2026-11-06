@@ -45,17 +45,47 @@ const pause=()=>new Promise(r=>setTimeout(r,100));
    if(await evaluate('window.floorTest.editor._preview.shadowRoot.querySelector("svg").getAttribute("viewBox")')===panStart.view)throw Error('Real pointer pan failed');
    await evaluate(`window.floorTest.editor._preview.shadowRoot.querySelector('[data-view=pan]').click();window.floorTest.editor._preview.shadowRoot.querySelector('[data-view=fit]').click()`);
 
+
+   // Exercise the normal live card with actual screen pointer events, no Lovelace editing attribute.
+   await evaluate(`document.body.replaceChildren(window.liveTest.card);window.liveTest.card.style.display='block';window.liveTest.card.style.maxWidth='1200px';window.liveTest.press('Inrichten');window.liveTest.press('Sensor plaatsen');window.confirm=()=>true`);
+   const liveDrag=async selector=>{
+    const a=await evaluate(`(()=>{const card=window.liveTest.card;const svg=card.shadowRoot.querySelector('svg');svg.scrollIntoView({block:'center'});const n=svg.querySelector('${selector}'),m=svg.getScreenCTM(),p=new DOMPoint(+n.getAttribute('cx'),+n.getAttribute('cy')).matrixTransform(m);return {x:p.x,y:p.y}})()`);
+    await send('Input.dispatchMouseEvent',{type:'mousePressed',x:a.x,y:a.y,button:'left',clickCount:1});
+    await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:a.x+25,y:a.y+15,button:'left',buttons:1});
+    await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:a.x+25,y:a.y+15,button:'left',clickCount:1});
+   };
+   const liveBefore=await evaluate('JSON.stringify(window.liveTest.card._config.placements[0])');
+   await liveDrag('[data-sensor=kantoor] circle:not(.selection)');
+   if(await evaluate('window.liveTest.card._config.placements[0].x')===JSON.parse(liveBefore).x)throw Error('Live sensor drag failed');
+   const yaw=await evaluate('window.liveTest.card._config.placements[0].yaw');
+   await liveDrag('[data-live-rotate]');
+   if(await evaluate('window.liveTest.card._config.placements[0].yaw')===yaw)throw Error('Live rotation failed');
+   await evaluate(`window.liveTest.card._zoneInteraction=true;window.liveTest.card._zoneDraft=[[0,1],[.5,1],[.5,2]];window.liveTest.card._render()`);
+   const zoneBefore=await evaluate('JSON.stringify(window.liveTest.card._zoneDraft)');
+   await liveDrag('[data-zone-vertex="0"]');
+   if(await evaluate('JSON.stringify(window.liveTest.card._zoneDraft)')===zoneBefore)throw Error('Live vertex drag failed');
+   if(width===390){
+    await send('Emulation.setTouchEmulationEnabled',{enabled:true});
+    const t=await evaluate(`(()=>{const c=window.liveTest.card,s=c.shadowRoot.querySelector('svg');s.scrollIntoView({block:'center'});const n=s.querySelector('[data-zone-vertex="1"]'),p=new DOMPoint(+n.getAttribute('cx'),+n.getAttribute('cy')).matrixTransform(s.getScreenCTM());return {x:p.x,y:p.y,before:JSON.stringify(c._zoneDraft)}})()`);
+    await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:t.x,y:t.y,id:1}]});
+    await send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:t.x+12,y:t.y+10,id:1}]});
+    await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    if(await evaluate('JSON.stringify(window.liveTest.card._zoneDraft)')===t.before)throw Error('Touch vertex drag failed');
+    await send('Emulation.setTouchEmulationEnabled',{enabled:false});
+   }
+   if(await evaluate('window.liveTest.calls.length')!==1)throw Error('Dragging wrote hardware');
+   await evaluate(`window.liveTest.press('Annuleren')`);
+   if(await evaluate('JSON.stringify(window.liveTest.card._config.placements[0])')!==liveBefore)throw Error('Cancel did not restore placement');
+   await evaluate(`window.liveTest.press('Inrichten');window.liveTest.card._zoneInteraction=true;window.liveTest.card._zoneDraft=[[0,1],[.5,1],[.5,2]];window.liveTest.card._render();scrollTo(0,0)`);
+   console.log(`${fixture} ${width}px: live pointer move, rotate, vertex drag and cancel passed`);
    if(process.env.SCREENSHOT_DIR){
-    await evaluate("document.querySelector('#results').style.display='none';scrollTo(0,0)");
+    await evaluate("document.querySelector('#results')?.remove();scrollTo(0,0)");
     const shot=await send('Page.captureScreenshot',{format:'png'});
     fs.mkdirSync(process.env.SCREENSHOT_DIR,{recursive:true});fs.writeFileSync(path.join(process.env.SCREENSHOT_DIR,`floorplan-${width}.png`),Buffer.from(shot.result.data,'base64'));
     await evaluate(`document.documentElement.style.cssText='--card-background-color:#1c232c;--secondary-background-color:#141a22;--primary-text-color:#e8edf2;--secondary-text-color:#aab8c8;--divider-color:#354352;--primary-color:#4ba9d5;--text-primary-color:#101923';document.body.style.background='#10151b'`);
     const dark=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(process.env.SCREENSHOT_DIR,`floorplan-dark-${width}.png`),Buffer.from(dark.result.data,'base64'));
     await evaluate(`document.documentElement.style.cssText='';document.body.style.background=''`);
-    for(const state of ['drawer','replace']){
-     await evaluate(state==='drawer'?`window.floorTest.editor.shadowRoot.querySelector('#settings').click()`:`window.floorTest.editor.shadowRoot.querySelector('#close-panel').click();window.floorTest.editor._imageDialog()`);
-     const detail=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(process.env.SCREENSHOT_DIR,`floorplan-${state}-${width}.png`),Buffer.from(detail.result.data,'base64'));
-    }
+
    }
    console.log(`${fixture} ${width}px: real pointer translation and rotation passed`);
   }
