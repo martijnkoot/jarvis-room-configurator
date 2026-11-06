@@ -321,8 +321,29 @@ const floorDefaults=()=>({
   {id:'keuken',name:'Keuken',x:8.444937705993652-(326-88)/80,y:11.150891304016113-(803-85)/80,yaw:90,mounting:'wall',height:null,tilt:0,calibrated:false,fov_range:6,fov_start:-60,fov_end:60}
  ],hardware:{}
 });
+// Image coordinates are map metres (u right, v down), independent of sensor poses.
+function floorImageValidate(image){
+ if(image==null)return;
+ if(typeof image!=='object'||Array.isArray(image))throw Error('Invalid floorplan image');
+ if(typeof image.url!=='string'||image.url.length>2048||!(/^(https:\/\/|\/(?!\/))/.test(image.url))||/[\\\s<>"']/.test(image.url))throw Error('Use a /local/ path or HTTPS image URL');
+ const url=new URL(image.url,'https://home-assistant.invalid');
+ if(url.username||url.password||! /\.(svg|png|jpe?g)$/i.test(url.pathname))throw Error('Use a direct SVG, PNG or JPG image URL without credentials');
+ for(const [key,min,max]of [['width',.1,1000],['height',.1,1000],['x',-1000,1000],['y',-1000,1000],['rotation',-360,360]])floorNumber(image[key],min,max,'image '+key);
+}
+function floorReplaceImage(config,image){
+ floorImageValidate(image);
+ return floorValidate({...config,floorplan_image:image,calibration:{...config.calibration,dimensions_confirmed:false}});
+}
+function floorImageBounds(image){
+ if(!image)return [-1.4,-1.3,14.4,7.8];
+ const a=image.rotation*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+ const points=[[0,0],[image.width,0],[0,image.height],[image.width,image.height]].map(([x,y])=>[image.x+x*c-y*s,image.y+x*s+y*c]);
+ const xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);
+ return [Math.min(...xs)-.8,Math.min(...ys)-.8,Math.max(...xs)-Math.min(...xs)+1.6,Math.max(...ys)-Math.min(...ys)+1.6];
+}
 function floorValidate(config){
  const defaults=floorDefaults(),c=floorClone({...defaults,...config});
+ floorImageValidate(c.floorplan_image);
  if(c.geometry_id!=='begane-grond-v9')throw Error('Unsupported geometry_id');
  if(!c.calibration||typeof c.calibration.dimensions_confirmed!=='boolean')throw Error('calibration.dimensions_confirmed must be boolean');
  if(!Array.isArray(c.placements)||c.placements.length>16)throw Error('placements: expected at most 16 sensors');
@@ -450,7 +471,7 @@ class JarvisFloorplanCard extends HTMLElement {
  _start(){if(this.isConnected&&!this._raf)this._raf=requestAnimationFrame(t=>this._animate(t));}
  static getStubConfig(){return floorDefaults();}
  static getConfigElement(){return document.createElement('jarvis-floorplan-card-editor');}
- setConfig(config){this._config=floorValidate(config);this._tracks.clear();this._render();this._start();}
+ setConfig(config){const next=floorValidate(config);if(JSON.stringify(next.floorplan_image)!==JSON.stringify(this._config?.floorplan_image))this._view=null;this._config=next;this._tracks.clear();this._render();this._start();}
  set hass(hass){this._hass=hass;this._refreshLive();if(this._registryConnection!==hass.connection||!this._registryLoaded){this._registryConnection=hass.connection;this._registryLoaded=true;floorRegistries(hass).then(r=>{if(this._hass?.connection!==hass.connection)return;this._registry=r;this._render();});}}
  getCardSize(){return 7;}
  getGridOptions(){return {columns:12,rows:7,min_columns:6,min_rows:4};}
@@ -462,28 +483,47 @@ class JarvisFloorplanCard extends HTMLElement {
  _render(){
   if(!this._config)return;
   this.shadowRoot.innerHTML=`<style>
-   :host{display:block}ha-card{display:block;padding:16px;overflow:hidden}h2{font-size:20px;margin:0 0 8px}
-   svg{display:block;width:100%;background:#fafcfe;color:#172b40;touch-action:pan-y;aspect-ratio:14.4/7.8}
-   .status{font-size:13px;line-height:1.5} .sensor{cursor:pointer} .sensor text{font:0.18px sans-serif}
-   .fov{opacity:.10;pointer-events:none} .target{stroke:white;stroke-width:.025}
+   :host{display:block}ha-card{display:block;padding:20px;overflow:hidden;border-radius:16px;border:1px solid var(--divider-color,#e1e6ec);background:var(--card-background-color,#fff);color:var(--primary-text-color,#172b40)}h2{font-size:20px;margin:0 0 8px}
+   svg{display:block;width:100%;background:var(--secondary-background-color,#f4f6f8);color:var(--primary-text-color,#172b40);touch-action:pan-y;aspect-ratio:14.4/8.8;border-radius:12px}
+   .status{font-size:12px;line-height:1.5;color:var(--secondary-text-color,#566779);margin:8px 0}.map-tools{display:flex;gap:6px;justify-content:flex-end;margin:8px 0}.map-tools button{border:1px solid var(--divider-color,#d6dfe8);border-radius:20px;background:var(--card-background-color,#fff);color:var(--primary-color,#03a9f4);min-height:36px;padding:0 14px;cursor:pointer}.map-tools button[aria-pressed=true]{background:var(--primary-color,#03a9f4);color:white} .sensor{cursor:pointer} .sensor text{font:0.18px sans-serif}
+   .selection{display:none}.sensor[data-selected=true] .selection{display:block}.fov{opacity:.10;pointer-events:none} .target{stroke:white;stroke-width:.025}
    :host([editing]) svg{touch-action:none}:host([editing]) .sensor{cursor:grab}
-  </style><ha-card><h2></h2><div class="status"></div><svg role="img" aria-label="Ground-floor geometry in metres" viewBox="-1.4 -1.3 14.4 7.8" preserveAspectRatio="xMidYMid meet"></svg><p class="status">Model metres; grid 1 m. Schematic sectors, without wall occlusion. Edit and save this card in Lovelace to persist placement.</p><div id="live-status" class="status" role="status"></div></ha-card>`;
+   #sensor-dialog{position:fixed;inset:0 0 0 auto;margin:0;width:min(480px,95vw);height:100dvh;max-height:100dvh;box-sizing:border-box;overflow:auto;padding:24px;border:1px solid var(--divider-color,#dce3e9);border-radius:20px 0 0 20px;background:var(--card-background-color,#fff);color:var(--primary-text-color,#172b40)}#sensor-dialog::backdrop{background:#10243466}#sensor-dialog button{min-height:40px;border:1px solid var(--divider-color,#dce3e9);border-radius:20px;padding:8px 16px;cursor:pointer}@media(max-width:600px){#sensor-dialog{inset:auto 0 0;margin:0;width:100%;height:auto;max-height:75dvh;border-radius:20px 20px 0 0}}
+  </style><ha-card><h2></h2><div class="status"></div><div class="map-tools" role="toolbar" aria-label="Map navigation"><button data-view="out" aria-label="Zoom out">−</button><button data-view="in" aria-label="Zoom in">+</button><button data-view="fit">Fit</button><button data-view="pan" aria-pressed="false">Pan</button></div><svg role="img" aria-label="Ground-floor geometry in metres" viewBox="-1.4 -1.3 14.4 7.8" preserveAspectRatio="xMidYMid meet"></svg><p class="status">Klik op een sensor voor details · Bereik is schematisch</p><div id="live-status" class="status" role="status"></div></ha-card>`;
   this.shadowRoot.querySelector('h2').textContent=this._config.title||'Begane grond';
-  this.shadowRoot.querySelector('.status').textContent=this._config.calibration.dimensions_confirmed?'Floorplan scale checked.':'Placement preview — verify position and scale visually. Targets remain visible.';
+  this.shadowRoot.querySelector('.status').textContent=this._config.calibration.dimensions_confirmed?'Schaal en uitlijning visueel gecontroleerd.':'Controleer schaal en uitlijning · sensorposities blijven behouden.';
   const svg=this.shadowRoot.querySelector('svg');
-  for(let u=0;u<=12;u++)this._node(svg,'line',{x1:u,y1:0,x2:u,y2:5.2,stroke:'#dde5ec','stroke-width':.012});
-  for(let v=0;v<=5;v++)this._node(svg,'line',{x1:0,y1:v,x2:11.674,y2:v,stroke:'#dde5ec','stroke-width':.012});
+  const image=this._config.floorplan_image;
+  this.shadowRoot.querySelector('[data-view=pan]').setAttribute('aria-pressed',String(!!this._panning));if(this._panning)svg.style.touchAction='none';
+  this._view=this._view||floorImageBounds(image);svg.setAttribute('viewBox',this._view.join(' '));
+  for(const button of this.shadowRoot.querySelectorAll('[data-view]'))button.onclick=()=>{
+   const action=button.dataset.view;
+   if(action==='pan'){this._panning=!this._panning;button.setAttribute('aria-pressed',String(this._panning));svg.style.touchAction=this._panning?'none':'';return;}
+   if(action==='fit')this._view=floorImageBounds(image);
+   else {const [x,y,w,h]=this._view,k=action==='in'?.8:1.25;if(w*k<.2||w*k>4000)return;this._view=[x+w*(1-k)/2,y+h*(1-k)/2,w*k,h*k];}
+   svg.setAttribute('viewBox',this._view.join(' '));
+  };
+  svg.onpointerdown=e=>{if(!this._panning||e.composedPath().some(n=>n.dataset?.sensor))return;const m=svg.getScreenCTM();if(!m)return;this._pan={id:e.pointerId,start:new DOMPoint(e.clientX,e.clientY).matrixTransform(m.inverse()),matrix:m.inverse(),view:[...this._view]};svg.setPointerCapture(e.pointerId);e.preventDefault();};
+  svg.onpointermove=e=>{if(this._pan?.id!==e.pointerId)return;const p=new DOMPoint(e.clientX,e.clientY).matrixTransform(this._pan.matrix),v=this._pan.view;this._view=[v[0]+this._pan.start.x-p.x,v[1]+this._pan.start.y-p.y,v[2],v[3]];svg.setAttribute('viewBox',this._view.join(' '));};
+  svg.onpointerup=svg.onpointercancel=e=>{if(this._pan?.id===e.pointerId){this._pan=null;if(svg.hasPointerCapture(e.pointerId))svg.releasePointerCapture(e.pointerId);}};
+  if(image){
+   const n=this._node(svg,'image',{href:image.url,x:0,y:0,width:image.width,height:image.height,preserveAspectRatio:'none',transform:`translate(${image.x} ${image.y}) rotate(${image.rotation})`,'pointer-events':'none'});
+   const status=this.shadowRoot.querySelector('.status');n.onerror=()=>{status.textContent='Floorplan image unavailable. Check the URL and access permissions. Sensor positions are preserved.';};
+  }
+  if(!image)for(let u=0;u<=12;u++)this._node(svg,'line',{x1:u,y1:0,x2:u,y2:5.2,stroke:'var(--divider-color,#dde5ec)','stroke-width':.012});
+  if(!image)for(let v=0;v<=5;v++)this._node(svg,'line',{x1:0,y1:v,x2:11.674,y2:v,stroke:'var(--divider-color,#dde5ec)','stroke-width':.012});
   const sectors=this._node(svg,'g',{'data-layer':'sectors'});
-  for(const [a,b] of jarvisGroundFloor.segments){const [x1,y1]=floorToMap(a),[x2,y2]=floorToMap(b);this._node(svg,'line',{x1,y1,x2,y2,stroke:'#172b40','stroke-width':.018,'pointer-events':'none'});}
-  this._node(svg,'path',{d:'M0,5.55 H1 M0,5.48 V5.62 M1,5.48 V5.62',stroke:'#172b40','stroke-width':.025});
-  this._node(svg,'text',{x:0,y:5.9,'font-size':.18},'1 m • model scale, no geographic north');
+  if(!image)for(const [a,b] of jarvisGroundFloor.segments){const [x1,y1]=floorToMap(a),[x2,y2]=floorToMap(b);this._node(svg,'line',{x1,y1,x2,y2,stroke:'var(--primary-text-color,#172b40)','stroke-width':.018,'pointer-events':'none'});}
+  this._node(svg,'path',{d:'M0,5.55 H1 M0,5.48 V5.62 M1,5.48 V5.62',stroke:'var(--primary-text-color,#172b40)','stroke-width':.025});
+  this._node(svg,'text',{x:0,y:5.9,'font-size':.18,fill:'var(--primary-text-color,#172b40)'},'1 m • model scale, no geographic north');
   for(const [i,s]of this._config.placements.entries()){
    const h=this._source(s),color=i===0?'#139b32':i===1?'#245aff':'#a548b0',center=floorToMap([s.x,s.y]),tip=floorToMap(floorProject(s,{},0,.5));
    if(s.show_fov!==false&&s.mounting==='wall'&&s.tilt===0){
     const points=[center];for(let j=0;j<=48;j++){const a=(s.fov_start+(s.fov_end-s.fov_start)*j/48)*Math.PI/180;points.push(floorToMap(floorProject(s,h,s.fov_range*Math.sin(a),s.fov_range*Math.cos(a))));}
     this._node(sectors,'polygon',{points:points.map(p=>p.join(',')).join(' '),fill:color,class:'fov'});
    }
-   const g=this._node(svg,'g',{'data-sensor':s.id,class:'sensor',tabindex:0,role:'button','aria-label':`${s.name}: ${s.x.toFixed(2)}, ${s.y.toFixed(2)} m; yaw ${s.yaw} degrees`});
+   const g=this._node(svg,'g',{'data-sensor':s.id,class:'sensor','data-selected':String(this._selectedSensor===s.id),'aria-pressed':String(this._selectedSensor===s.id),tabindex:0,role:'button','aria-label':`${s.name}: ${s.x.toFixed(2)}, ${s.y.toFixed(2)} m; yaw ${s.yaw} degrees`});
+   this._node(g,'circle',{cx:center[0],cy:center[1],r:.19,fill:'none',stroke:color,'stroke-width':.025,class:'selection','pointer-events':'none'});
    this._node(g,'line',{x1:center[0],y1:center[1],x2:tip[0],y2:tip[1],stroke:color,'stroke-width':.055,'pointer-events':'none'});
    this._node(g,'circle',{cx:center[0],cy:center[1],r:.11,fill:color,stroke:'transparent','stroke-width':24,'vector-effect':'non-scaling-stroke'});
    this._node(g,'text',{x:center[0]+.15,y:center[1]-.15,fill:color},s.name);
@@ -546,13 +586,13 @@ class JarvisFloorplanCard extends HTMLElement {
     let d='';for(let i=1;i<t.trail.length;i++){const p=t.trail[i],a=t.trail[i-1],b=Math.min(7,Math.floor(8*(now-p.time)/t.duration));if(b===band)d+=`M${a.point.join(',')}L${p.point.join(',')}`;}
     if(d)this._node(this._liveLayer,'path',{d,fill:'none',stroke:t.color,'stroke-width':.035,opacity:(1-band/8)*.65});
    }
-   if(t.active){const[cx,cy]=t.point;this._node(this._liveLayer,'circle',{cx,cy,r:.085,fill:t.color,class:'target'});this._node(this._liveLayer,'text',{x:cx+.12,y:cy,'font-size':.16},t.label);}
+   if(t.active){const[cx,cy]=t.point;this._node(this._liveLayer,'circle',{cx,cy,r:.085,fill:t.color,class:'target'});this._node(this._liveLayer,'text',{x:cx+.12,y:cy,'font-size':.16,fill:'var(--primary-text-color,#172b40)'},t.label);}
   }
  }
  _animate(now){this._raf=0;if(!this.isConnected)return;this._drawFrame(now,Math.min(100,now-(this._lastFrame??now)));this._lastFrame=now;this._start();}
  _openSensor(id){
   this.shadowRoot.querySelector('#sensor-dialog')?.remove();
-  const dialog=document.createElement('dialog');dialog.id='sensor-dialog';dialog.style.cssText='width:min(900px,85vw);max-height:85vh;overflow:auto';
+  const dialog=document.createElement('dialog');dialog.id='sensor-dialog';dialog.setAttribute('aria-label','Sensor details');
   const close=document.createElement('button');close.textContent='Close';close.onclick=()=>dialog.close();
   const note=document.createElement('p');note.textContent='Sensor settings. To change placement or source, use Edit dashboard → Edit card → select this sensor, then Save.';
   const s=this._config.placements.find(p=>p.id===id),h=this._source(s),info=document.createElement('p');info.textContent=`${s.name} · ${s.mounting} · ${h.targets.length} X/Y pairs · rotation ${s.yaw}°`;
@@ -589,12 +629,27 @@ class JarvisFloorplanCardEditor extends HTMLElement {
  }
  _selectedPose(){return this._config.placements.find(s=>s.id===this._selected);}
  _build(){
-  this.shadowRoot.innerHTML=`<style>:host{display:block}label{display:inline-flex;flex-direction:column;gap:4px;margin:6px;max-width:100%;font:14px system-ui}input,select,button,textarea{font:inherit;box-sizing:border-box;max-width:100%}input[type=number]{width:135px}textarea{display:block;width:100%;min-height:170px}#error{color:var(--error-color,#b42318)}p{line-height:1.5}button{margin:6px}jarvis-floorplan-card{display:block}</style>
-   <p>Drag a sensor circle to move; drag its white handle to rotate. Numeric fields also support keyboard editing. Save the Lovelace card/dashboard to persist. These controls never write to ESPHome.</p>
-   <jarvis-floorplan-card editing></jarvis-floorplan-card><label>Sensor<select id="sensor"></select></label><div id="fields"></div>
-   <button id="add">Add sensor</button><button id="remove">Remove selected sensor</button>
-   <details><summary>Import settings from an old radar card</summary><p>Paste the old card configuration (flat YAML or JSON). This copies display settings and discovers all targets from its source. Set the physical position on this floorplan and save before removing the old card.</p><textarea id="legacy" aria-label="Old radar card configuration"></textarea><button id="import">Import into selected sensor</button></details>
+  this.shadowRoot.innerHTML=`<style>
+   :host{display:block;color:var(--primary-text-color,#182b3c);font:14px var(--paper-font-body1_-_font-family,system-ui);container-type:inline-size}
+   *{box-sizing:border-box}button,input,select,textarea{font:inherit;max-width:100%}button{min-height:40px;border:1px solid var(--divider-color,#dce3e9);border-radius:22px;padding:8px 16px;background:var(--card-background-color,#fff);color:var(--primary-color,#007eaf);cursor:pointer}button:hover{filter:brightness(.96)}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--primary-color,#03a9f4);outline-offset:2px}.primary{background:var(--primary-color,#007eaf);color:var(--text-primary-color,#fff);border-color:transparent}.danger{color:var(--error-color,#b42318)}
+   .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 0}.toolbar strong{margin-right:auto;font-size:18px}.workspace{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:16px;align-items:start}.canvas{min-width:0}jarvis-floorplan-card{display:block}aside{min-width:0;border:1px solid var(--divider-color,#dce3e9);border-radius:16px;padding:16px;background:var(--card-background-color,#fff);max-height:78vh;overflow:auto}aside header{position:sticky;top:-16px;padding:8px 0;background:var(--card-background-color,#fff);z-index:1;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}aside h3{margin:0;font-size:16px}label{display:flex;flex-direction:column;gap:6px;margin:12px 0;min-width:0}input,select,textarea{width:100%;padding:10px;border:1px solid var(--divider-color,#c8d4df);border-radius:8px;color:var(--primary-text-color,#182b3c);background:var(--card-background-color,#fff);min-height:42px}input[type=checkbox]{width:20px;min-height:20px;align-self:flex-start;accent-color:var(--primary-color,#03a9f4)}details{border-top:1px solid var(--divider-color,#e3e9ee);padding:14px 0}summary{cursor:pointer;font-weight:600;line-height:1.6}p{line-height:1.6;color:var(--secondary-text-color,#566779);font-size:13px}.save-note{border-radius:8px;padding:10px 14px;background:var(--secondary-background-color,#eef5f9);margin-top:0}#error,#image-error{color:var(--error-color,#b42318)}#error:empty,#image-error:empty{display:none}#discovery{padding:10px;background:var(--secondary-background-color,#eef5f9);border-radius:8px;overflow-wrap:anywhere}#close-panel{display:none}#image-dialog{width:min(560px,94vw);max-height:90vh;overflow:auto;border:1px solid var(--divider-color,#dce3e9);border-radius:20px;padding:24px;background:var(--card-background-color,#fff);color:inherit}dialog::backdrop{background:#10243466}.image-fields{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}textarea{min-height:140px}
+   @container (max-width:800px){.workspace{grid-template-columns:1fr}aside{display:none}aside[data-open]{display:block;position:fixed;inset:auto 0 0;max-height:70dvh;z-index:10;border-radius:20px 20px 0 0;box-shadow:0 -12px 60px #10243444;padding:20px}#close-panel{display:block}.toolbar strong{width:100%}.toolbar button{flex:1;padding:8px}.toolbar #image{flex-basis:100%}.save-note{font-size:12px}}
+  </style>
+   <div class="toolbar" role="toolbar" aria-label="Floorplan actions"><strong>Plattegrond</strong><button id="image" class="primary">Plattegrond uploaden/vervangen</button><button id="add">+ Sensor</button><button id="settings">Sensorinstellingen</button><button id="scale-check">Schaal controleren</button></div>
+   <p class="save-note" role="status">Concept · Sleep een sensor om te verplaatsen. Sla daarna de kaart op in Home Assistant.</p>
+   <div class="workspace"><div class="canvas"><jarvis-floorplan-card editing></jarvis-floorplan-card></div><aside aria-label="Sensor settings"><header><h3>Sensorinstellingen</h3><button id="close-panel" aria-label="Close sensor settings">Sluiten</button></header><label>Sensor<select id="sensor"></select></label><div id="fields"></div><button id="remove" class="danger">Sensor verwijderen</button>
+   <details><summary>Import old radar card</summary><p>Paste existing flat YAML or JSON settings to migrate this sensor.</p><textarea id="legacy" aria-label="Old radar card configuration"></textarea><button id="import">Import into selected sensor</button></details></aside></div>
    <p id="error" role="alert"></p>`;
+  this.shadowRoot.querySelector('#image').onclick=()=>this._imageDialog();
+  this.shadowRoot.querySelector('#scale-check').onclick=()=>{
+   this.shadowRoot.querySelector('#image-dialog')?.remove();
+   const dialog=document.createElement('dialog');dialog.id='image-dialog';dialog.setAttribute('aria-label','Schaal en uitlijning controleren');dialog.innerHTML='<h2>Schaal en uitlijning</h2><p>Controleer twee onafhankelijke afstanden en drie bekende punten op de kaart. Vergelijk daarna de sensorposities met de echte ruimte. Dit is een visuele bevestiging, geen automatische meting.</p><div class="actions"><button class="primary">Gecontroleerd</button><button>Annuleren</button></div>';
+   const buttons=dialog.querySelectorAll('button');buttons[0].onclick=()=>{this._emit({...this._config,calibration:{...this._config.calibration,dimensions_confirmed:true}});dialog.close();};buttons[1].onclick=()=>dialog.close();dialog.onclose=()=>dialog.remove();this.shadowRoot.append(dialog);dialog.showModal();
+  };
+  const panel=this.shadowRoot.querySelector('aside');
+  this.shadowRoot.querySelector('#settings').onclick=()=>panel.setAttribute('data-open','');
+  this.shadowRoot.querySelector('#close-panel').onclick=()=>{panel.removeAttribute('data-open');this.shadowRoot.querySelector('#settings').focus();};
+  panel.onkeydown=e=>{if(e.key==='Escape'){panel.removeAttribute('data-open');this.shadowRoot.querySelector('#settings').focus();}};
   this._preview=this.shadowRoot.querySelector('jarvis-floorplan-card');this._preview.setConfig(this._config);if(this._hass)this._preview.hass=this._hass;
   const select=this.shadowRoot.querySelector('#sensor');
   for(const s of this._config.placements){const o=document.createElement('option');o.value=s.id;o.textContent=s.name;select.append(o);}select.value=this._selected||'';
@@ -615,7 +670,7 @@ class JarvisFloorplanCardEditor extends HTMLElement {
    }}
    this._emit(floorConvertLegacy(this._config,this._selected,legacy));this._fields();
   });
-  this._preview.addEventListener('sensor-selected',e=>{this._selected=e.detail.id;select.value=this._selected;this._fields();});
+  this._preview.addEventListener('sensor-selected',e=>{this._selected=e.detail.id;select.value=this._selected;this._fields();panel.setAttribute('data-open','');select.focus({preventScroll:true});});
   // Capture on the preview host, which survives redraws. Pointer positions use inverse SVG CTM.
   this._preview.addEventListener('pointerdown',e=>this._down(e));
   this._preview.addEventListener('pointermove',e=>this._move(e));
@@ -623,28 +678,56 @@ class JarvisFloorplanCardEditor extends HTMLElement {
   this._preview.addEventListener('pointercancel',e=>this._end(e));
   this._preview.addEventListener('lostpointercapture',()=>{this._drag=null;});
  }
+ _imageDialog(){
+  this.shadowRoot.querySelector('#image-dialog')?.remove();
+  const dialog=document.createElement('dialog');dialog.id='image-dialog';dialog.setAttribute('aria-labelledby','image-title');
+  dialog.innerHTML=`<h2 id="image-title">Plattegrond uploaden/vervangen</h2><p>Deze kaart slaat zelf geen bestanden op. Plaats je SVG, PNG of JPG met je bestaande bestandsbeheer in <b>config/www</b> en vul hieronder <b>/local/bestandsnaam.png</b> in. Een vaste HTTPS-afbeeldingslink kan ook.</p><p>Let op: /local-bestanden zijn zonder HA-login toegankelijk. Gebruik geen vertrouwelijke bouwtekening. Tijdelijke media-, blob- en downloadlinks worden niet ondersteund.</p><label>Afbeeldings-URL<input id="image-url" type="text" placeholder="/local/plattegrond.png"></label><div class="image-fields"></div><p>Breedte en hoogte zijn de echte afmetingen van de volledige afbeelding, inclusief marges. X/Y zijn kaartmeters (rechts/omlaag), niet sensorassen. Controleer minstens twee afstanden en drie bekende punten.</p><p role="status">Vervangen of uitlijnen wist de schaalcontrole. Sensorposities, koppelingen en polygonen blijven behouden. Controleer de uitlijning vóór gebruik.</p><p id="image-error" role="alert"></p><div class="actions"><button id="image-apply" class="primary">Controleren en gebruiken</button><button id="image-cancel">Annuleren</button><button id="image-reset">Originele plattegrond</button></div>`;
+  const image=this._config.floorplan_image||{url:'',width:11.674,height:5.2,x:0,y:0,rotation:0};
+  dialog.querySelector('#image-url').value=image.url;
+  for(const [key,label,step]of [['width','Breedte (m)',.01],['height','Hoogte (m)',.01],['x','Oorsprong X (m)',.01],['y','Oorsprong Y (m)',.01],['rotation','Rotatie (°)',1]]){
+   const l=document.createElement('label');l.textContent=label;const input=document.createElement('input');input.type='number';input.step=step;input.value=image[key];input.dataset.image=key;l.append(input);dialog.querySelector('.image-fields').append(l);
+  }
+  const error=dialog.querySelector('#image-error'),apply=dialog.querySelector('#image-apply');
+  dialog.querySelector('#image-cancel').onclick=()=>dialog.close();
+  dialog.querySelector('#image-reset').onclick=()=>{this._emit(floorReplaceImage(this._config,null));dialog.close();};
+  apply.onclick=async()=>{
+   apply.disabled=true;error.textContent='Afbeelding controleren…';
+   try{
+    const next={url:dialog.querySelector('#image-url').value.trim()};
+    for(const input of dialog.querySelectorAll('[data-image]')){if(!input.value.trim())throw Error('Vul alle afmetingen en de oorsprong in.');next[input.dataset.image]=Number(input.value);}
+    floorImageValidate(next);
+    await new Promise((resolve,reject)=>{const img=new Image(),timer=setTimeout(()=>reject(Error('Afbeelding laden duurt te lang. Controleer de URL.')),10000);img.onload=()=>{clearTimeout(timer);if(img.naturalWidth*img.naturalHeight>40000000)reject(Error('Afbeelding te groot (maximaal 40 megapixels).'));else resolve();};img.onerror=()=>{clearTimeout(timer);reject(Error('Afbeelding niet bereikbaar of geen ondersteund beeldbestand.'));};img.src=next.url;});
+    if(!dialog.open)return;
+    this._emit(floorReplaceImage(this._config,next));dialog.close();
+   }catch(e){error.textContent=e.message;}finally{apply.disabled=false;}
+  };
+  this.shadowRoot.append(dialog);dialog.showModal();
+ }
  _try(fn){try{fn();this.shadowRoot.querySelector('#error').textContent='';}catch(e){this.shadowRoot.querySelector('#error').textContent=e.message;}}
  _fields(){
+  this._preview._selectedSensor=this._selected;for(const node of this._preview.shadowRoot.querySelectorAll('[data-sensor]')){node.dataset.selected=String(node.dataset.sensor===this._selected);node.setAttribute('aria-pressed',node.dataset.selected);}
   const root=this.shadowRoot.querySelector('#fields');root.replaceChildren();const s=this._selectedPose();if(!s)return;
-  const advanced=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Position, field of view and movement';advanced.append(summary);root.append(advanced);
-  for(const [key,label,min,max,step]of [['scale','Visual distance scale',.1,10,.01],['smoothing_ms','Movement smoothing (ms)',0,2000,10],['trail_seconds','Trail length (seconds)',0,60,1],['x','Position X (m)',-1000,1000,.01],['y','Position Y (m)',-1000,1000,.01],['yaw','Rotation (°)',-360,360,1],['height','Mounting height (m)',0,10,.01],['tilt','Downward tilt (°)',-90,90,1],['fov_range','Display radius (m)',.1,6,.1],['fov_start','Local FOV start (°)',-60,60,1],['fov_end','Local FOV end (°)',-60,60,1]]){
-   const l=document.createElement('label');l.textContent=label;const input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step=step;input.value=typeof s[key]==='number'?Number(s[key].toFixed(3)):({scale:1,smoothing_ms:180,trail_seconds:8}[key]??'');input.dataset.field=key;l.append(input);(key==='scale'?root:advanced).append(l);
+  const advanced=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Positie en montage';advanced.open=true;advanced.append(summary);root.append(advanced);
+  const group=title=>{const d=document.createElement('details'),t=document.createElement('summary');t.textContent=title;d.append(t);root.append(d);return d;};
+  const coverage=group('Bereik en assen'),motion=group('Beweging en sporen');
+  for(const [key,label,min,max,step]of [['scale','Afstandsschaal sensor',.1,10,.01],['smoothing_ms','Vloeiende beweging (ms)',0,2000,10],['trail_seconds','Sporen (seconden)',0,60,1],['x','Positie X (m)',-1000,1000,.01],['y','Positie Y (m)',-1000,1000,.01],['yaw','Rotatie (°)',-360,360,1],['height','Montagehoogte (m)',0,10,.01],['tilt','Kanteling (°)',-90,90,1],['fov_range','Bereik (m)',.1,6,.1],['fov_start','Beginhoek (°)',-60,60,1],['fov_end','Eindhoek (°)',-60,60,1]]){
+   const l=document.createElement('label');l.textContent=label;const input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step=step;input.value=typeof s[key]==='number'?Number(s[key].toFixed(3)):({scale:1,smoothing_ms:180,trail_seconds:8}[key]??'');input.dataset.field=key;l.append(input);(['scale','fov_range','fov_start','fov_end'].includes(key)?coverage:['smoothing_ms','trail_seconds'].includes(key)?motion:advanced).append(l);
    input.onchange=()=>this._try(()=>{if(!input.value.trim()&&key!=='height')throw Error('A numeric value is required');this._changePose({[key]:input.value.trim()?Number(input.value):null});});
   }
-  const label=document.createElement('label');label.textContent='Mounting';const select=document.createElement('select');select.dataset.field='mounting';
-  for(const value of ['wall','ceiling']){const option=document.createElement('option');option.value=value;option.textContent=value;select.append(option);}select.value=s.mounting;select.onchange=()=>this._try(()=>this._changePose({mounting:select.value}));label.append(select);root.append(label);
-  const done=document.createElement('button');done.dataset.placementCheck='';done.textContent=s.calibrated?'Placement verified':'Mark placement as visually checked';done.onclick=()=>this._try(()=>{this._changePose({calibrated:true});this._fields();});root.append(done);
-  const name=document.createElement('input');name.value=s.name;name.dataset.field='name';name.setAttribute('aria-label','Sensor name');name.onchange=()=>this._try(()=>this._changePose({name:name.value}));const nameLabel=document.createElement('label');nameLabel.textContent='Sensor name';nameLabel.append(name);root.prepend(nameLabel);
-  const sourceLabel=document.createElement('label');sourceLabel.textContent='Roomnode device or target X/Y entity';const source=document.createElement('select');source.id='source';sourceLabel.append(source);root.prepend(sourceLabel);
+  const label=document.createElement('label');label.textContent='Montage';const select=document.createElement('select');select.dataset.field='mounting';
+  for(const value of ['wall','ceiling']){const option=document.createElement('option');option.value=value;option.textContent=value==='wall'?'Wand':'Plafond';select.append(option);}select.value=s.mounting;select.onchange=()=>this._try(()=>this._changePose({mounting:select.value}));label.append(select);advanced.append(label);
+  const done=document.createElement('button');done.dataset.placementCheck='';done.className='primary';done.textContent=s.calibrated?'Plaatsing gecontroleerd':'Plaatsing visueel gecontroleerd';done.onclick=()=>this._try(()=>{this._changePose({calibrated:true});this._fields();});root.append(done);
+  const name=document.createElement('input');name.value=s.name;name.dataset.field='name';name.setAttribute('aria-label','Sensor name');name.onchange=()=>this._try(()=>this._changePose({name:name.value}));const nameLabel=document.createElement('label');nameLabel.textContent='Sensornaam';nameLabel.append(name);root.prepend(nameLabel);
+  const sourceLabel=document.createElement('label');sourceLabel.textContent='Roomnode of target-entiteit';const source=document.createElement('select');source.id='source';sourceLabel.append(source);root.prepend(sourceLabel);
   source.onchange=()=>this._try(()=>{const value=source.value,[kind,...parts]=value.split(':');const h={...this._config.hardware[s.id],targets:[]};delete h.device_id;delete h.source_entity;delete h.entity_prefix;if(kind==='device')h.device_id=parts.join(':');if(kind==='entity')h.source_entity=parts.join(':');this._changeHardware(h);this._fields();});
-  for(const [key,labelText]of [['flip_x','Mirror left / right'],['flip_y','Mirror forward / backward']]){
-   const label=document.createElement('label'),box=document.createElement('input');label.textContent=labelText;box.type='checkbox';box.checked=!!this._config.hardware[s.id]?.[key];box.dataset.field=key;box.onchange=()=>this._try(()=>this._changeHardware({...this._config.hardware[s.id],[key]:box.checked}));label.append(box);root.append(label);
+  for(const [key,labelText]of [['flip_x','Spiegel links/rechts'],['flip_y','Spiegel voor/achter']]){
+   const label=document.createElement('label'),box=document.createElement('input');label.textContent=labelText;box.type='checkbox';box.checked=!!this._config.hardware[s.id]?.[key];box.dataset.field=key;box.onchange=()=>this._try(()=>this._changeHardware({...this._config.hardware[s.id],[key]:box.checked}));label.append(box);coverage.append(label);
   }
-  const fov=document.createElement('label'),box=document.createElement('input');fov.textContent='Show field of view';box.type='checkbox';box.checked=s.show_fov!==false;box.dataset.field='show_fov';box.onchange=()=>this._try(()=>this._changePose({show_fov:box.checked}));fov.append(box);root.append(fov);
+  const fov=document.createElement('label'),box=document.createElement('input');fov.textContent='Toon detectieveld';box.type='checkbox';box.checked=s.show_fov!==false;box.dataset.field='show_fov';box.onchange=()=>this._try(()=>this._changePose({show_fov:box.checked}));fov.append(box);coverage.append(fov);
   const diagnostic=document.createElement('p');diagnostic.id='discovery';diagnostic.setAttribute('role','status');root.append(diagnostic);
   this._sourceOptions();
-  const refresh=document.createElement('button');refresh.textContent='Refresh device discovery';refresh.onclick=()=>{if(this._hass?.connection)floorRegistryCache.delete(this._hass.connection);this._registry=null;this.hass=this._hass;};root.append(refresh);
-  const hint=document.createElement('p');hint.textContent='Display calibration only: move, rotate or adjust scale to match your room. This does not change hardware axes, mounting mode or zones. Ceiling/tilted placement is stored for future projection; it does not currently display floor targets.';root.append(hint);
+  const refresh=document.createElement('button');refresh.textContent='Apparaten vernieuwen';refresh.onclick=()=>{if(this._hass?.connection)floorRegistryCache.delete(this._hass.connection);this._registry=null;this.hass=this._hass;};root.append(refresh);
+  const hint=document.createElement('p');hint.textContent='Alleen weergave: hardware en zones veranderen niet. Plafondmontage en kanteling worden opgeslagen, maar tonen nog geen geprojecteerde targets.';root.append(hint);
   const tools=document.createElement('div');tools.id='polygon-tools';root.append(tools);if(this._hass)this._preview._appendPolygonEditor(tools,s,this._preview._source(s));
  }
  _changeHardware(h){this._emit({...this._config,hardware:{...this._config.hardware,[this._selected]:h}});}
@@ -665,7 +748,7 @@ class JarvisFloorplanCardEditor extends HTMLElement {
   // Moving any physical pose invalidates its previous calibration.
   const invalidate=['x','y','yaw','height','tilt','mounting','scale'].some(k=>Object.hasOwn(patch,k));
   this._emit({...this._config,placements:this._config.placements.map(s=>s.id===this._selected?{...s,...patch,...(invalidate?{calibrated:false}:{})}:s)});
-  if(invalidate){const button=this.shadowRoot.querySelector('[data-placement-check]');if(button)button.textContent='Mark placement as visually checked';}
+  if(invalidate){const button=this.shadowRoot.querySelector('[data-placement-check]');if(button)button.textContent='Plaatsing visueel gecontroleerd';}
  }
  _point(e){
   const svg=this._preview.shadowRoot.querySelector('svg'),m=svg.getScreenCTM();if(!m)throw Error('SVG is not visible');

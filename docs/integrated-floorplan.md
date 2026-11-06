@@ -64,8 +64,9 @@ tracking accuracy or cross-sensor fusion.
 The sensor transform applies mirrors, visual distance scale and yaw once to
 coordinates, polygons and hardware overlays. The floorplan continues to use the
 reviewed Blender geometry, model metres and independent sensor poses. Its current
-geometry ID is `begane-grond-v9`; arbitrary house geometry and multiple-floor
-switching are not implemented here. Placement/source settings remain independent
+geometry ID is `begane-grond-v9`; custom SVG/PNG/JPG image backgrounds are supported through the
+[workspace replacement workflow](floorplan-workspace.md). Multiple-floor switching
+is not implemented. Placement/source settings remain independent
 of geometry so a future geometry provider need not change device discovery.
 
 Wall/zero tilt uses the established horizontal projection. Ceiling and tilted

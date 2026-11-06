@@ -3,6 +3,8 @@ const {spawn}=require('node:child_process');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const profile=fs.mkdtempSync(path.join(os.tmpdir(),'jrc-browser-'));
 const chrome=spawn(process.env.CHROME_BIN||'google-chrome',['--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--remote-debugging-port=0',`--user-data-dir=${profile}`,'--allow-file-access-from-files','about:blank'],{stdio:['ignore','ignore','pipe']});
+const root=path.resolve(__dirname,'..');
+const server=require('node:http').createServer((req,res)=>{try{const file=path.resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));if(!file.startsWith(root+path.sep))throw Error('Invalid path');res.setHeader('Content-Type',file.endsWith('.svg')?'image/svg+xml':file.endsWith('.js')?'text/javascript':file.endsWith('.png')?'image/png':file.endsWith('.jpg')?'image/jpeg':'text/html');res.end(fs.readFileSync(file));}catch{res.statusCode=404;res.end('Not found');}}).listen(0,'127.0.0.1');
 let socket,startError='',diagnostics='';
 chrome.stderr.on('data',chunk=>{diagnostics=(diagnostics+chunk.toString()).slice(-4000);});
 const deadline=setTimeout(()=>{console.error('Browser validation timed out');socket?.close();chrome.kill();process.exitCode=1;},60000);
@@ -16,8 +18,8 @@ const pause=()=>new Promise(r=>setTimeout(r,100));
  let id=0;const pending=new Map();socket.onmessage=e=>{const m=JSON.parse(e.data);if(m.id){pending.get(m.id)(m);pending.delete(m.id);}};
  const send=(method,params={})=>new Promise(r=>{pending.set(++id,r);socket.send(JSON.stringify({id,method,params}));});
  for(const fixture of ['browser.html','floorplan-browser.html'])for(const width of [390,1280]){
-  await send('Emulation.setDeviceMetricsOverride',{width,height:1400,deviceScaleFactor:1,mobile:false});
-  await send('Page.navigate',{url:require('node:url').pathToFileURL(path.join(__dirname,fixture)).href});
+  await send('Emulation.setDeviceMetricsOverride',{width,height:width<600?844:1000,deviceScaleFactor:1,mobile:false});
+  await send('Page.navigate',{url:`http://127.0.0.1:${server.address().port}/tests/${fixture}`});
   let output='';for(let i=0;i<80;i++){
    const r=await send('Runtime.evaluate',{expression:`location.pathname.endsWith('/${fixture}') ? document.querySelector('#results')?.textContent : ''`,returnByValue:true});output=r.result?.result?.value||'';
    if(output.includes('FAIL')||output.includes('PASS Finished'))break;await pause();
@@ -36,13 +38,27 @@ const pause=()=>new Promise(r=>setTimeout(r,100));
     if(after.calibrated)throw Error('Pointer editing must invalidate calibration');
    };
    await drag(false);await drag(true);
+   const panStart=await evaluate(`(()=>{const p=window.floorTest.editor._preview,svg=p.shadowRoot.querySelector('svg');p.shadowRoot.querySelector('[data-view=pan]').click();const r=svg.getBoundingClientRect();return {x:r.x+20,y:r.y+20,view:svg.getAttribute('viewBox')}})()`);
+   await send('Input.dispatchMouseEvent',{type:'mousePressed',x:panStart.x,y:panStart.y,button:'left',clickCount:1});
+   await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:panStart.x+30,y:panStart.y+20,button:'left',buttons:1});
+   await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:panStart.x+30,y:panStart.y+20,button:'left',clickCount:1});
+   if(await evaluate('window.floorTest.editor._preview.shadowRoot.querySelector("svg").getAttribute("viewBox")')===panStart.view)throw Error('Real pointer pan failed');
+   await evaluate(`window.floorTest.editor._preview.shadowRoot.querySelector('[data-view=pan]').click();window.floorTest.editor._preview.shadowRoot.querySelector('[data-view=fit]').click()`);
+
    if(process.env.SCREENSHOT_DIR){
-    await evaluate('scrollTo(0,0)');
+    await evaluate("document.querySelector('#results').style.display='none';scrollTo(0,0)");
     const shot=await send('Page.captureScreenshot',{format:'png'});
     fs.mkdirSync(process.env.SCREENSHOT_DIR,{recursive:true});fs.writeFileSync(path.join(process.env.SCREENSHOT_DIR,`floorplan-${width}.png`),Buffer.from(shot.result.data,'base64'));
+    await evaluate(`document.documentElement.style.cssText='--card-background-color:#1c232c;--secondary-background-color:#141a22;--primary-text-color:#e8edf2;--secondary-text-color:#aab8c8;--divider-color:#354352;--primary-color:#4ba9d5;--text-primary-color:#101923';document.body.style.background='#10151b'`);
+    const dark=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(process.env.SCREENSHOT_DIR,`floorplan-dark-${width}.png`),Buffer.from(dark.result.data,'base64'));
+    await evaluate(`document.documentElement.style.cssText='';document.body.style.background=''`);
+    for(const state of ['drawer','replace']){
+     await evaluate(state==='drawer'?`window.floorTest.editor.shadowRoot.querySelector('#settings').click()`:`window.floorTest.editor.shadowRoot.querySelector('#close-panel').click();window.floorTest.editor._imageDialog()`);
+     const detail=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(process.env.SCREENSHOT_DIR,`floorplan-${state}-${width}.png`),Buffer.from(detail.result.data,'base64'));
+    }
    }
    console.log(`${fixture} ${width}px: real pointer translation and rotation passed`);
   }
   console.log(`${fixture} ${width}px: ${output.split('\n').length} browser checks passed`);
  }
- }finally{clearTimeout(deadline);socket?.close();chrome.kill();}})().catch(e=>{console.error(e);process.exitCode=1;});
+ }finally{clearTimeout(deadline);socket?.close();chrome.kill();server.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
