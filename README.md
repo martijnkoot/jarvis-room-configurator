@@ -6,7 +6,7 @@ An optional Home Assistant Marketplace / HACS **Dashboard plugin** for existing
 ESPHome LD2460 roomnodes. No Python integration, configuration flow or Helper is
 required. This migration retains the existing target card and its configuration.
 
-## Integrated floorplan (next version)
+## Integrated floorplan
 
 **Jarvis Ground Floor** is the primary card. Add `custom:jarvis-floorplan-card`,
 open its visual editor, choose each roomnode device (or one target X/Y entity),
@@ -19,6 +19,15 @@ The sensor panel contains the polygon/hardware tool. **Apply to ESPHome** is
 still an explicit action. Display changes never program hardware. The old radar
 card is absent from the picker; existing configurations remain readable during
 migration. Keep the JavaScript resource for the integrated floorplan.
+
+The visual editor now uses a map workspace with a contextual right panel (mobile
+bottom drawer), grouped sensor controls and zoom/pan. The visible
+**Plattegrond uploaden/vervangen** action supports validated SVG/PNG/JPG URLs,
+independent image alignment and scale checks without resetting sensor placements.
+This plugin does not store uploaded files: place an image in `config/www` through
+your existing file manager and use `/local/filename.png`, or a stable HTTPS image
+URL. `/local` files are publicly accessible without HA login. No backend or
+private upload API is assumed. [Replacement and calibration guide, with screenshots](docs/floorplan-workspace.md).
 
 See [the placement/source guide](docs/integrated-floorplan.md) and
 [safe migration](docs/migration.md). The older examples below describe the

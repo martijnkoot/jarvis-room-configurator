@@ -1,5 +1,5 @@
 <!doctype html><meta charset="utf-8"><title>Floorplan acceptance fixture</title>
-<style>body{font:16px system-ui;margin:12px;background:#eee}jarvis-floorplan-card,jarvis-floorplan-card-editor{display:block;background:white;max-width:1200px;margin:auto}#results{white-space:pre-wrap}</style>
+<style>body{font:16px system-ui;margin:12px;background:#eee}jarvis-floorplan-card,jarvis-floorplan-card-editor{display:block;background:var(--card-background-color,white);max-width:1200px;margin:auto}#results{white-space:pre-wrap}</style>
 <jarvis-floorplan-card></jarvis-floorplan-card><jarvis-floorplan-card-editor></jarvis-floorplan-card-editor><pre id="results">RUNNING</pre>
 <script src="../dist/jarvis-room-configurator.js"></script>
 <script>
@@ -64,6 +64,39 @@ const results=[],check=(ok,message)=>{if(!ok)throw Error(message);results.push('
  await local._apply();check(calls.length===1&&calls[0][0]==='text'&&calls[0][1]==='set_value'&&calls[0][2].entity_id==='text.renamed_zone','explicit Apply writes only selected device polygon');
  card._openSensor('kantoor');check(card.shadowRoot.querySelector('dialog[open]'),'runtime sensor click opens integrated settings summary');card.shadowRoot.querySelector('dialog').close();
  const frame=card._raf;card.remove();check(frame&&!card._raf,'disconnection cancels animation');
+ // Replacement is a draft transaction: invalid/cancelled assets must not mutate config.
+ const previous=JSON.stringify(editor._config),poses=JSON.stringify(editor._config.placements),hardware=JSON.stringify(editor._config.hardware);
+ editor.shadowRoot.querySelector('#image').click();let dialog=editor.shadowRoot.querySelector('#image-dialog');
+ check(dialog.open&&!dialog.querySelector('input[type=file]'),'visible replacement route explains durable URL storage without fake file upload');
+ dialog.querySelector('#image-url').value='javascript:alert(1)';await dialog.querySelector('#image-apply').onclick();
+ check(JSON.stringify(editor._config)===previous&&dialog.querySelector('#image-error').textContent,'unsafe image rejected without changing config');
+ dialog.querySelector('#image-url').value='/tests/assets/missing.png';await dialog.querySelector('#image-apply').onclick();
+ check(JSON.stringify(editor._config)===previous&&dialog.open,'missing image rejected without changing config');
+ dialog.querySelector('#image-url').value='/tests/assets/house.svg';dialog.querySelector('#image-cancel').click();
+ check(JSON.stringify(editor._config)===previous,'cancel replacement preserves previous configuration');
+ editor._imageDialog();dialog=editor.shadowRoot.querySelector('#image-dialog');dialog.querySelector('#image-url').value='/tests/assets/house.svg';
+ dialog.querySelector('[data-image=width]').value=10;dialog.querySelector('[data-image=height]').value=5;
+ await dialog.querySelector('#image-apply').onclick();
+ check(!dialog.open&&editor._config.floorplan_image.width===10,'SVG loads successfully before replacement commits');
+ check(JSON.stringify(editor._config.placements)===poses&&JSON.stringify(editor._config.hardware)===hardware,'replacement preserves every sensor pose and source');
+ check(!editor._config.calibration.dimensions_confirmed,'replacement invalidates previous floor scale verification');
+ check(editor._preview.shadowRoot.querySelector('image').getAttribute('href')==='/tests/assets/house.svg','replacement rendered as inert SVG image');
+ const imageReload=document.createElement('jarvis-floorplan-card');imageReload.setConfig(JSON.parse(JSON.stringify(editor._config)));check(imageReload._config.floorplan_image.url==='/tests/assets/house.svg','image config survives dashboard recreation');
+ const view=editor._preview.shadowRoot.querySelector('svg'),original=view.getAttribute('viewBox'),eventBefore=events;
+ editor._preview.shadowRoot.querySelector('[data-view=in]').click();check(view.getAttribute('viewBox')!==original&&events===eventBefore,'zoom changes viewport without changing saved coordinates');
+ editor._preview.shadowRoot.querySelector('[data-view=fit]').click();check(view.getAttribute('viewBox')===original,'fit restores image bounds');
+ editor._preview.shadowRoot.querySelector('[data-view=pan]').click();check(editor._preview._panning,'explicit pan mode enabled');editor._preview.shadowRoot.querySelector('[data-view=pan]').click();
+ editor.shadowRoot.querySelector('#settings').click();check(editor.shadowRoot.querySelector('aside').hasAttribute('data-open'),'mobile settings drawer opens explicitly');
+ editor.shadowRoot.querySelector('#close-panel').click();check(!editor.shadowRoot.querySelector('aside').hasAttribute('data-open'),'drawer closes without changing draft');
+ editor._preview.shadowRoot.querySelector('[data-sensor=kantoor]').dispatchEvent(new MouseEvent('click',{bubbles:true}));
+ check(editor.shadowRoot.querySelector('aside').hasAttribute('data-open'),'sensor click selects and opens contextual panel');editor.shadowRoot.querySelector('#close-panel').click();
+ editor.shadowRoot.querySelector('#scale-check').click();editor.shadowRoot.querySelector('#image-dialog button').click();check(editor._config.calibration.dimensions_confirmed,'explicit visual scale check is persisted');
+ for(const url of ['/docs/icon.png','/docs/begane-grond-annotated.jpg']){
+  editor._imageDialog();const d=editor.shadowRoot.querySelector('#image-dialog');d.querySelector('#image-url').value=url;await d.querySelector('#image-apply').onclick();
+  check(!d.open&&editor._config.floorplan_image.url===url,'raster image decoded and persisted: '+url);
+ }
+ // Restore the source fixture and pose used by the real pointer checks.
+ editor._emit({...editor._config,floorplan_image:null});
  check(true,'Finished');
 }catch(e){results.push('FAIL '+e.stack);}
 document.querySelector('#results').textContent=results.join('\n');})();

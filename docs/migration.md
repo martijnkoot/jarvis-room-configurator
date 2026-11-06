@@ -36,3 +36,12 @@ To roll back, restore the previous plugin release/resource, restore the backed-u
 card YAML, and refresh the browser. Merely reverting plugin code does not restore
 an already edited dashboard, which is why the YAML backup matters. Polygon data
 stays on ESPHome; display import/removal does not change it.
+
+## Workspace UI after PR #5
+
+No configuration migration is required. Existing geometry, placements, hardware
+links and unknown Lovelace options remain readable. `floorplan_image` is an optional
+image URL and transform; its absence (or null) uses the bundled drawing. Replacing
+the image changes neither sensor poses nor device polygons. Keep a copy of the
+previous dashboard configuration to roll back an image URL/transform; restoring
+the original drawing does not reset sensors. See [the workspace guide](floorplan-workspace.md).

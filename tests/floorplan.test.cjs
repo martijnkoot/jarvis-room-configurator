@@ -46,3 +46,26 @@ test('live targets ignore legacy calibration gates but unsupported projection is
  assert.match(run('s.tilt=0;card._config.hardware.kantoor.mode_entity="select.mode";card._hass={states:{"select.mode":{state:"top"}}};card._reason(s)'),/not Side/);
  assert.equal(run('card._hass.states["select.mode"].state="side";card._reason(s)'),null);
 });
+test('image replacement preserves poses, hardware and unknown options while invalidating scale check',()=>{
+ const {c,run}=load();c.URL=URL;
+ const before=run('JSON.stringify({...floorDefaults(),calibration:{dimensions_confirmed:true,custom:7},unknown:42})');
+ c.before=JSON.parse(before);
+ const after=JSON.parse(run(`JSON.stringify(floorReplaceImage(before,{url:'/local/house.svg',width:10,height:5,x:-2,y:3,rotation:90}))`));
+ assert.deepEqual(after.placements,c.before.placements);assert.deepEqual(after.hardware,c.before.hardware);
+ assert.equal(after.unknown,42);assert.equal(after.calibration.custom,7);assert.equal(after.calibration.dimensions_confirmed,false);
+ c.next=after;assert.equal(run('floorReplaceImage(next,null).floorplan_image'),null);
+});
+test('rejects transient, executable, credential and invalid image configuration',()=>{
+ const {c,run}=load();c.URL=URL;
+ for(const url of ['blob:123','data:image/svg+xml,a','javascript:alert(1)','http://example.com/a.png','//example.com/a.png','https://u:p@example.com/a.jpg','/local/a.html','/local/a.png" onload="x','/local/../a.svg\\x']){
+  c.url=url;assert.throws(()=>run(`floorImageValidate({url,width:10,height:5,x:0,y:0,rotation:0})`),url);
+ }
+ for(const patch of [{width:0},{height:Infinity},{rotation:361},{x:null}]){c.patch=patch;assert.throws(()=>run(`floorImageValidate({url:'/local/a.png',width:10,height:5,x:0,y:0,rotation:0,...patch})`));}
+ for(const url of ['/local/a.svg','/local/a.PNG?v=2','https://example.com/house.jpg']){c.url=url;run(`floorImageValidate({url,width:10,height:5,x:0,y:0,rotation:0})`);}
+});
+test('fit bounds include all four corners of rotated and translated images',()=>{
+ const {run}=load();
+ const bounds=run('floorImageBounds({width:10,height:5,x:2,y:3,rotation:90})');
+ assert.ok(Math.abs(bounds[0]+3.8)<1e-9);assert.ok(Math.abs(bounds[1]-2.2)<1e-9);
+ assert.ok(Math.abs(bounds[2]-6.6)<1e-9);assert.ok(Math.abs(bounds[3]-11.6)<1e-9);
+});
