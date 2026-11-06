@@ -282,3 +282,7 @@ calibration and movement are documented in [Integrated floorplan](docs/integrate
 For the original model registration and evidence, see the explicitly historical
 [PR #4 prototype record](docs/floorplan.md). Follow [Migration](docs/migration.md)
 before removing individual radar cards. No live dashboard or resource is rewritten.
+
+### Live inrichten en zones op de grote plattegrond
+
+Kies **Inrichten** op de livekaart en vervolgens **Sensor plaatsen** of **Zone bewerken**. Sensoren, draairing en zonehoekpunten worden op de grote kaart bediend; het zijpaneel bevat geen tweede canvas. **Bewaren / export** levert de volledige plaatsingsconfiguratie om via de officiële Home Assistant-kaarteditor op te slaan; de livekaart kan deze niet rechtstreeks op de server opslaan. Zonepreviews worden alleen met een afzonderlijk bevestigde **Apply to ESPHome** verstuurd. Zie [bediening, opslaggrenzen en validatie](docs/live-floorplan.md).
