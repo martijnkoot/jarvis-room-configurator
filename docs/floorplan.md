@@ -1,3 +1,9 @@
+# Historical ground-floor prototype (PR #4)
+
+This records the previous implementation and evidence. For the current workflow,
+use [Integrated floorplan](integrated-floorplan.md) and [Migration](migration.md).
+The calibration gates and manual mapping below are historical, not prerequisites.
+
 # Ground-floor prototype
 
 Add a separate Lovelace card using the **same installed JavaScript resource**:

@@ -4,7 +4,7 @@
 <script src="../dist/jarvis-room-configurator.js"></script>
 <script>
 const results=[],check=(ok,message)=>{if(!ok)throw Error(message);results.push('PASS '+message);};
-try{
+(async()=>{try{
  const card=document.querySelector('jarvis-floorplan-card'),editor=document.querySelector('jarvis-floorplan-card-editor');
  let saved,events=0,calls=[];
  const config={...JarvisFloorplanCard.getStubConfig(),grid_options:{columns:'full'},unknown:{keep:true}};
@@ -16,17 +16,16 @@ try{
  check(svg.getBoundingClientRect().width>250,'floorplan visible');
  check(document.documentElement.scrollWidth<=innerWidth,'floorplan and controls fit viewport');
  check(svg.querySelectorAll('[data-sensor]').length===2,'two independent sensors');
- check(svg.querySelector('[data-layer=targets]').children.length===0,'uncalibrated live targets blocked');
+ check(svg.querySelector('[data-layer=targets]').children.length===0,'unconfigured source has no fabricated targets');
  const input=editor.shadowRoot.querySelector('[data-field=x]');input.value=7;input.dispatchEvent(new Event('change'));
  check(saved.placements[0].x===7&&saved.placements[1].x===config.placements[1].x,'position editing isolated per sensor');
  check(saved.grid_options.columns==='full'&&saved.unknown.keep,'unknown configuration preserved');
  check(editor.shadowRoot.querySelector('[data-field=x]')===input,'HA editor echo retains focused controls');
  const height=editor.shadowRoot.querySelector('[data-field=height]');height.value=1.7;height.dispatchEvent(new Event('change'));
  const before=events;input.value='';input.dispatchEvent(new Event('change'));check(events===before,'invalid draft does not emit');input.value=7;
- const dimensions=editor.shadowRoot.querySelector('#dimensions');dimensions.checked=true;dimensions.dispatchEvent(new Event('change'));
- const calibrated=editor.shadowRoot.querySelector('[data-field=calibrated]');calibrated.checked=true;calibrated.dispatchEvent(new Event('change'));
- const hardware=editor.shadowRoot.querySelector('#hardware');hardware.value=JSON.stringify({kantoor:{axes_confirmed:true,flip_x:false,flip_y:false,targets:[{x_entity:'sensor.test_x',y_entity:'sensor.test_y'}]}});editor.shadowRoot.querySelector('#apply-hardware').click();
- check(card.shadowRoot.querySelector('[data-layer=targets]').querySelectorAll('circle').length===1,'calibrated explicit mixed-unit target plotted');
+ // Existing explicit mappings remain supported without any calibration gates.
+ editor._changeHardware({axes_confirmed:false,flip_x:false,flip_y:false,targets:[{x_entity:'sensor.test_x',y_entity:'sensor.test_y'}]});
+ check(card.shadowRoot.querySelector('[data-layer=targets]').querySelectorAll('circle').length===1,'uncalibrated explicit mixed-unit target plotted');
  const expected=floorToMap(floorProject(saved.placements[0],saved.hardware.kantoor,1,2)),dot=card.shadowRoot.querySelector('.target');check(Math.hypot(+dot.getAttribute('cx')-expected[0],+dot.getAttribute('cy')-expected[1])<1e-8,'live target shares pose transformation');
  hass.states['sensor.test_x']=state('unavailable','cm');card.hass=hass;check(!card.shadowRoot.querySelector('.target'),'unavailable target removed immediately');
  for(const [x,y]of [[0,0],[7,1]]){hass.states['sensor.test_x']=state(x,'m');hass.states['sensor.test_y']=state(y,'m');card.hass=hass;check(!card.shadowRoot.querySelector('.target'),'empty or out-of-range target omitted');}
@@ -34,11 +33,38 @@ try{
  const mounting=editor.shadowRoot.querySelector('[data-field=mounting]');mounting.value='ceiling';mounting.dispatchEvent(new Event('change'));
  check(saved.placements[0].calibrated===false&&!card.shadowRoot.querySelector('.target'),'pose changes invalidate calibration and ceiling suppresses projection');
  mounting.value='wall';mounting.dispatchEvent(new Event('change'));
+ // Automatic source selection through the actual editor control, no per-target JSON.
+ hass.states['sensor.kantoor_jarvis_roomnode_esp_test_tracking_target_1_x']=state(100,'cm');
+ hass.states['sensor.kantoor_jarvis_roomnode_esp_test_tracking_target_1_y']=state(2000,'mm');
+ hass.states['sensor.kantoor_jarvis_roomnode_esp_test_tracking_target_2_x']=state(2,'m');
+ hass.states['sensor.kantoor_jarvis_roomnode_esp_test_tracking_target_2_y']=state(1,'m');
+ editor._fields();const source=editor.shadowRoot.querySelector('#source');source.value='entity:sensor.kantoor_jarvis_roomnode_esp_test_tracking_target_1_x';source.dispatchEvent(new Event('change'));
+ check(saved.hardware.kantoor.source_entity===source.value.replace(/^entity:/,''),'source selection persists in Lovelace');
+ check(card._source(saved.placements[0]).targets.length===2,'all discovered targets automatically linked');
+ check(card.shadowRoot.querySelectorAll('.target').length===2,'all discovered targets immediately visible');
+ check(!editor.shadowRoot.querySelector('#hardware')&&!editor.shadowRoot.querySelector('#dimensions'),'no technical mapping JSON or calibration checkbox workflow');
+ const tool=editor.shadowRoot.querySelector('#polygon-tools details');check(!!tool,'polygon editor integrated in sensor panel');
+ tool.open=true;tool.dispatchEvent(new Event('toggle'));check(!!tool.querySelector('jarvis-target-card'),'polygon tool opens explicitly');
  const restored=document.createElement('jarvis-floorplan-card');restored.setConfig(JSON.parse(JSON.stringify(saved)));check(JSON.stringify(restored._config)===JSON.stringify(saved),'Lovelace save/recreation round trip');
  const p=floorToMap([7,8]),screen=new DOMPoint(...p).matrixTransform(editor._preview.shadowRoot.querySelector('svg').getScreenCTM()),back=editor._point({clientX:screen.x,clientY:screen.y});check(Math.hypot(back[0]-7,back[1]-8)<1e-6,'inverse screen transform maps metre coordinates');
  check(calls.length===0,'floorplan never calls HA services');
  window.floorTest={editor,card,getSaved:()=>saved};
+ // Registries arrive asynchronously, as in HA. Renamed targets must remain scoped.
+ const registryEntities=[{entity_id:'sensor.renamed_x',device_id:'office',original_name:'Tracking Target 1 X'},{entity_id:'sensor.renamed_y',device_id:'office',original_name:'Tracking Target 1 Y'},{entity_id:'text.renamed_zone',device_id:'office',original_name:'Polygon Zone 1'}];
+ hass.connection={};let registryCalls=0;hass.callWS=async request=>{registryCalls++;return request.type.includes('entity_registry')?registryEntities:[{id:'office',name_by_user:'Office radar'}];};
+ hass.states['sensor.renamed_x']=state(1,'m');hass.states['sensor.renamed_y']=state(2,'m');hass.states['text.renamed_zone']={state:'0:0;1000:0;1000:1000',attributes:{}};
+ editor.hass=card.hass=hass;await floorRegistries(hass);await new Promise(resolve=>setTimeout(resolve,0));
+ const device=editor.shadowRoot.querySelector('#source');device.value='device:office';device.dispatchEvent(new Event('change'));
+ check(saved.hardware.kantoor.device_id==='office'&&card._source(saved.placements[0]).targets[0].x_entity==='sensor.renamed_x','device selection resolves renamed coordinates through registry');
+ check(registryCalls===2,'registry inventory shared once per connection');
+ check(card.shadowRoot.querySelector('[data-layer=polygons] polygon'),'device polygon projected on map');
+ const polygonTool=editor.shadowRoot.querySelector('#polygon-tools details');polygonTool.open=true;polygonTool.dispatchEvent(new Event('toggle'));
+ const local=polygonTool.querySelector('jarvis-target-card');local._draft=[[0,0],[1,0],[1,1]];
+ check(calls.length===0,'source discovery and polygon preview never write');
+ await local._apply();check(calls.length===1&&calls[0][0]==='text'&&calls[0][1]==='set_value'&&calls[0][2].entity_id==='text.renamed_zone','explicit Apply writes only selected device polygon');
+ card._openSensor('kantoor');check(card.shadowRoot.querySelector('dialog[open]'),'runtime sensor click opens integrated settings summary');card.shadowRoot.querySelector('dialog').close();
+ const frame=card._raf;card.remove();check(frame&&!card._raf,'disconnection cancels animation');
  check(true,'Finished');
 }catch(e){results.push('FAIL '+e.stack);}
-document.querySelector('#results').textContent=results.join('\n');
+document.querySelector('#results').textContent=results.join('\n');})();
 </script>

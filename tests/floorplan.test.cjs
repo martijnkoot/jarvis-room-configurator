@@ -28,7 +28,7 @@ test('projection preserves distances for independent headings and flips',()=>{
 });
 test('invalid poses/mappings are rejected and unknown Lovelace options survive',()=>{
  const {run}=load();
- for(const patch of ['x:NaN','yaw:Infinity','mounting:"roof"','fov_start:60','height:-1','calibrated:true'])assert.throws(()=>run(`floorValidate({...floorDefaults(),placements:[{...floorDefaults().placements[0],${patch}}]})`));
+ for(const patch of ['x:NaN','yaw:Infinity','mounting:"roof"','fov_start:60','height:-1'])assert.throws(()=>run(`floorValidate({...floorDefaults(),placements:[{...floorDefaults().placements[0],${patch}}]})`));
  assert.throws(()=>run('floorValidate({...floorDefaults(),placements:[floorDefaults().placements[0],floorDefaults().placements[0]]})'));
  for(const h of ['{targets:[{x_entity:"sensor.a",y_entity:"sensor.a"}]}','{targets:[],axes_confirmed:"yes"}','{targets:[],mode_entity:"sensor.mode"}'])assert.throws(()=>run(`floorValidate({...floorDefaults(),hardware:{kantoor:${h}}})`));
  assert.equal(run('floorValidate({...floorDefaults(),grid_options:{columns:"full"},future:{key:42}}).future.key'),42);
@@ -36,13 +36,13 @@ test('invalid poses/mappings are rejected and unknown Lovelace options survive',
 test('target units fail closed; zero and six metre limits are enforced in the rendering path',()=>{
  const {run}=load();for(const [unit,value,expected]of [['m','1.5',1.5],['cm','150',1.5],['mm','1500',1.5],['ft','2',null],['m','unavailable',null],['m','',null]])assert.equal(run(`floorMetres({state:${JSON.stringify(value)},attributes:{unit_of_measurement:${JSON.stringify(unit)}}})`),expected);
 });
-test('live gates require dimension, pose and axes calibration and reject ceiling/tilt/device-mode mismatch',()=>{
+test('live targets ignore legacy calibration gates but unsupported projection is explicit',()=>{
  const {run}=load();run('var card=new JarvisFloorplanCard();card._render=()=>{};card.setConfig(floorDefaults());var s=card._config.placements[0]');
- assert.match(run('card._reason(s)'),/not calibrated/);
- run('card._config.calibration.dimensions_confirmed=true;s.calibrated=true;s.height=1.5;card._config.hardware.kantoor={targets:[{x_entity:"sensor.x",y_entity:"sensor.y"}],axes_confirmed:true}');
+ assert.match(run('card._reason(s)'),/Choose a roomnode/);
+ run('card._config.hardware.kantoor={targets:[{x_entity:"sensor.x",y_entity:"sensor.y"}],axes_confirmed:false}');
  assert.equal(run('card._reason(s)'),null);
- assert.match(run('s.mounting="ceiling";card._reason(s)'),/not implemented/);
- assert.match(run('s.mounting="wall";s.tilt=5;card._reason(s)'),/not implemented/);
- assert.match(run('s.tilt=0;card._config.hardware.kantoor.mode_entity="select.mode";card._hass={states:{"select.mode":{state:"top"}}};card._reason(s)'),/not confirmed side/);
+ assert.match(run('s.mounting="ceiling";card._reason(s)'),/not yet supported/);
+ assert.match(run('s.mounting="wall";s.tilt=5;card._reason(s)'),/not yet supported/);
+ assert.match(run('s.tilt=0;card._config.hardware.kantoor.mode_entity="select.mode";card._hass={states:{"select.mode":{state:"top"}}};card._reason(s)'),/not Side/);
  assert.equal(run('card._hass.states["select.mode"].state="side";card._reason(s)'),null);
 });
