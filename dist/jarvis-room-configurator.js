@@ -301,7 +301,7 @@ class JarvisTargetCardEditor extends HTMLElement {
 if(!customElements.get('jarvis-target-card-editor'))customElements.define('jarvis-target-card-editor',JarvisTargetCardEditor);
 if(!customElements.get('jarvis-target-card'))customElements.define('jarvis-target-card',JarvisTargetCard);
 window.customCards=window.customCards||[];
-if(!window.customCards.some(x=>x.type==='jarvis-target-card'))window.customCards.push({type:'jarvis-target-card',name:'Jarvis Room Configurator',description:'LD2460 live targets and polygon editor'});
+// Legacy element retained for migration and the integrated polygon tool.
 
 // BEGIN GENERATED FLOOR GEOMETRY (tools/embed-floor-geometry.py)
 const jarvisGroundFloor={"units":"m","source_sha256":"6fc7a40c5f05131f868061994e6007c0ce44760628bec3be9dddb71438d8e800","scene":"Scene","plane_z_m":1.2,"coordinate_system":"Blender world XY; +Z up","segments":[[[8.34493637084961,7.680891990661621],[8.34493637084961,9.433292388916016]],[[8.34493637084961,9.433292388916016],[8.34493637084961,11.050891876220703]],[[5.734868049621582,5.451241970062256],[5.734868049621582,4.297275543212891]],[[5.734868049621582,4.297275543212891],[5.734868049621582,4.077471733093262]],[[5.734868049621582,4.07747220993042],[5.734868049621582,3.047144651412964]],[[8.444936752319336,11.150891304016113],[8.444936752319336,11.098891258239746]],[[8.444937705993652,3.2212421894073486],[8.444937705993652,7.027473449707031]],[[8.444936752319336,11.098891258239746],[8.444936752319336,9.294490814208984]],[[8.444936752319336,9.294490814208984],[8.444937705993652,7.027473449707031]],[[3.244936943054199,11.150890350341797],[3.244936943054199,5.08054256439209]],[[3.244936943054199,5.080542087554932],[3.244936943054199,-0.5228553414344788]],[[5.83486795425415,1.877145528793335],[5.83486795425415,1.963684320449829]],[[5.83486795425415,1.963684320449829],[5.83486795425415,1.9771459102630615]],[[5.83486795425415,3.2212421894073486],[5.83486795425415,3.1376752853393555]],[[5.83486795425415,-0.522855281829834],[5.83486795425415,-0.47485509514808655]],[[5.83486795425415,3.047144651412964],[5.83486795425415,3.121757984161377]],[[5.83486795425415,3.121757984161377],[5.83486795425415,3.1376752853393555]],[[5.83486795425415,-0.47485509514808655],[5.83486795425415,0.3415452837944031]],[[5.83486795425415,0.3415452837944031],[5.83486795425415,0.3571452498435974]],[[5.83486795425415,0.3571453094482422],[5.83486795425415,1.0471453666687012]],[[7.564937114715576,6.670891761779785],[7.564937114715576,6.0366740226745605]],[[7.564937114715576,6.0366740226745605],[7.564937114715576,5.451241970062256]],[[8.34493637084961,7.580891132354736],[7.887336730957031,7.580891132354736]],[[7.887336730957031,7.580891132354736],[7.464937210083008,7.580891132354736]],[[7.344936847686768,4.571241855621338],[7.8649373054504395,4.571241855621338]],[[7.8649373054504395,4.571241855621338],[8.344937324523926,4.571241855621338]],[[5.734868049621582,1.0471453666687012],[5.734868049621582,0.417145311832428]],[[5.734868049621582,-0.4228549003601074],[5.734868049621582,0.4171452522277832]],[[7.564937114715576,6.670891761779785],[7.512937068939209,6.670891761779785]],[[7.512937068939209,6.670891761779785],[7.464937210083008,6.670891761779785]],[[5.83486795425415,4.151241779327393],[6.017268180847168,4.151241779327393]],[[6.017268180847168,4.151241779327393],[6.214868068695068,4.151241779327393]],[[5.734868049621582,5.451241970062256],[5.329303741455078,5.451241970062256]],[[5.329303741455078,5.451241970062256],[4.954936981201172,5.451241970062256]],[[6.494936943054199,5.451241970062256],[6.151700973510742,5.451241970062256]],[[6.151700973510742,5.451241970062256],[5.83486795425415,5.451241970062256]],[[3.3449368476867676,5.551241874694824],[3.708936929702759,5.551241874694824]],[[3.708936929702759,5.551241874694824],[4.0449371337890625,5.551241874694824]],[[4.0449371337890625,5.451241970062256],[3.6809370517730713,5.451241970062256]],[[3.6809370517730713,5.451241970062256],[3.3449368476867676,5.451241970062256]],[[7.344936847686768,4.471242427825928],[7.344936847686768,4.523241996765137]],[[7.344936847686768,4.523241996765137],[7.344936847686768,4.571241855621338]],[[7.344936847686768,3.2212421894073486],[7.344936847686768,3.2773396968841553]],[[7.344936847686768,3.56124210357666],[7.344936847686768,3.4364421367645264]],[[7.344936847686768,3.2773396968841553],[7.344936847686768,3.321242094039917]],[[7.344936847686768,3.4364421367645264],[7.344936847686768,3.4338951110839844]],[[7.344936847686768,3.4338951110839844],[7.344936847686768,3.321242094039917]],[[7.444936752319336,3.56124210357666],[7.444936752319336,3.4364421367645264]],[[7.444936752319336,3.4364421367645264],[7.444936752319336,3.321242094039917]],[[4.954936981201172,5.551241874694824],[5.694137096405029,5.551241874694824]],[[5.694137096405029,5.551241874694824],[6.494936943054199,5.551241874694824]],[[4.954868316650391,1.877145528793335],[5.27828311920166,1.877145528793335]],[[5.83486795425415,1.877145528793335],[5.790965557098389,1.877145528793335]],[[5.27828311920166,1.877145528793335],[5.286368370056152,1.877145528793335]],[[4.044868469238281,1.877145528793335],[3.754652976989746,1.877145528793335]],[[5.286368370056152,1.877145528793335],[5.790965557098389,1.877145528793335]],[[3.3449368476867676,1.877145528793335],[3.754652976989746,1.877145528793335]],[[5.83486795425415,3.321242094039917],[5.83486795425415,3.321242094039917]],[[7.344936847686768,4.471242427825928],[7.8649373054504395,4.471242427825928]],[[7.8649373054504395,4.471242427825928],[8.344937324523926,4.471242427825928]],[[5.83486795425415,3.2212421894073486],[5.83486795425415,3.2212421894073486]],[[8.34493637084961,7.680891513824463],[7.939336776733398,7.680891513824463]],[[7.564937114715576,7.680891513824463],[7.708937168121338,7.680891513824463]],[[7.939336776733398,7.680891513824463],[7.756937026977539,7.680891513824463]],[[7.708937168121338,7.680891513824463],[7.756937026977539,7.680891513824463]],[[8.344937324523926,4.571241855621338],[8.34493637084961,6.13625955581665]],[[8.34493637084961,6.13625955581665],[8.34493637084961,7.580891132354736]],[[8.344937324523926,3.321242094039917],[8.344937324523926,3.9192423820495605]],[[8.344937324523926,3.9192423820495605],[8.344937324523926,4.471242427825928]],[[6.214868068695068,4.151241779327393],[6.214868068695068,3.719641923904419]],[[6.214868068695068,3.719641923904419],[6.214868068695068,3.321242094039917]],[[7.564937114715576,7.780540943145752],[7.564937114715576,7.728723049163818]],[[7.564937114715576,7.728723049163818],[7.564937114715576,7.680891513824463]],[[7.464937210083008,7.8805413246154785],[7.704936981201172,7.8805413246154785]],[[7.704936981201172,7.8805413246154785],[7.964937210083008,7.8805413246154785]],[[6.434937000274658,3.321242094039917],[6.3406219482421875,3.321242094039917]],[[6.3406219482421875,3.321242094039917],[6.214868068695068,3.321242094039917]],[[5.83486795425415,3.321242094039917],[6.006468296051025,3.321242094039917]],[[6.006468296051025,3.321242094039917],[6.164868354797363,3.321242094039917]],[[7.8649373054504395,7.780540943145752],[7.708937168121338,7.780540943145752]],[[7.708937168121338,7.780540943145752],[7.564937114715576,7.780540943145752]],[[6.164868354797363,4.1012420654296875],[6.006468296051025,4.1012420654296875]],[[6.006468296051025,4.1012420654296875],[5.83486795425415,4.1012420654296875]],[[7.964937210083008,7.680891513824463],[7.912937164306641,7.680891513824463]],[[7.912937164306641,7.680891513824463],[7.8649373054504395,7.680891513824463]],[[7.8649373054504395,7.680891513824463],[7.8649373054504395,7.7327094078063965]],[[7.8649373054504395,7.7327094078063965],[7.8649373054504395,7.780540943145752]],[[6.164868354797363,3.321242094039917],[6.164868354797363,3.726842164993286]],[[6.164868354797363,3.726842164993286],[6.164868354797363,4.1012420654296875]],[[5.83486795425415,4.1012420654296875],[5.83486795425415,3.6956419944763184]],[[5.83486795425415,3.6956419944763184],[5.83486795425415,3.321242094039917]],[[7.748595237731934,3.321242094039917],[7.692821025848389,3.321242094039917]],[[8.344937324523926,3.321242094039917],[8.190839767456055,3.321242094039917]],[[8.190839767456055,3.321242094039917],[8.048595428466797,3.321242094039917]],[[7.692821025848389,3.321242094039917],[7.444936752319336,3.321242094039917]],[[5.83486795425415,5.451241970062256],[5.83486795425415,4.775241851806641]],[[5.83486795425415,4.775241851806641],[5.83486795425415,4.151241779327393]],[[8.444936752319336,11.150891304016113],[8.112136840820312,11.150891304016113]],[[8.112136840820312,11.150891304016113],[8.0023832321167,11.150891304016113]],[[3.244936943054199,11.150890350341797],[3.489018678665161,11.150890350341797]],[[3.704936981201172,11.150890350341797],[3.489018678665161,11.150890350341797]],[[8.0023832321167,11.150891304016113],[7.80493688583374,11.150891304016113]],[[4.7249369621276855,11.150890350341797],[4.938107490539551,11.150890350341797]],[[5.104936599731445,11.150890350341797],[4.938107490539551,11.150890350341797]],[[3.3449368476867676,5.451241970062256],[3.3449368476867676,3.644711971282959]],[[3.3449368476867676,3.644711971282959],[3.3449368476867676,1.9771459102630615]],[[3.3449368476867676,1.877145528793335],[3.3449368476867676,0.681145191192627]],[[3.3449368476867676,0.6811453104019165],[3.3449368476867676,-0.4228549301624298]],[[3.244936943054199,-0.5228553414344788],[4.591701030731201,-0.522855281829834]],[[5.83486795425415,-0.522855281829834],[4.639700889587402,-0.522855281829834]],[[4.639700889587402,-0.522855281829834],[4.591701030731201,-0.522855281829834]],[[3.3449368476867676,11.050890922546387],[3.3449368476867676,8.191073417663574]],[[3.3449368476867676,8.191073417663574],[3.3449368476867676,5.551241874694824]],[[7.464937210083008,7.580891132354736],[7.464937210083008,7.736709117889404]],[[7.464937210083008,7.736709117889404],[7.464937210083008,7.8805413246154785]],[[7.464937210083008,5.551241874694824],[7.464937210083008,6.13346004486084]],[[7.464937210083008,6.13346004486084],[7.464937210083008,6.670891761779785]],[[7.404936790466309,5.551241874694824],[7.4361371994018555,5.551241874694824]],[[7.4361371994018555,5.551241874694824],[7.464937210083008,5.551241874694824]],[[3.3449368476867676,-0.4228549301624298],[4.587701320648193,-0.4228549003601074]],[[4.587700843811035,-0.4228549003601074],[5.734868049621582,-0.4228549003601074]],[[7.564937114715576,5.451241970062256],[7.48173713684082,5.451241970062256]],[[7.48173713684082,5.451241970062256],[7.404936790466309,5.451241970062256]],[[7.80493688583374,11.150891304016113],[7.80493688583374,11.111701965332031]],[[7.80493688583374,11.111701965332031],[7.80493688583374,11.050891876220703]],[[7.404936790466309,5.451241970062256],[7.404936790466309,5.499241828918457]],[[7.404936790466309,5.499241828918457],[7.404936790466309,5.551241874694824]],[[6.494936943054199,5.551241874694824],[6.494936943054199,5.503242015838623]],[[6.494936943054199,5.503242015838623],[6.494936943054199,5.451241970062256]],[[4.954936981201172,5.451241970062256],[4.954936981201172,5.499241828918457]],[[4.954936981201172,5.499241828918457],[4.954936981201172,5.551241874694824]],[[4.0449371337890625,5.551241874694824],[4.0449371337890625,5.499241828918457]],[[4.0449371337890625,5.499241828918457],[4.0449371337890625,5.451241970062256]],[[7.444936752319336,3.56124210357666],[7.392936706542969,3.56124210357666]],[[7.392936706542969,3.56124210357666],[7.344936847686768,3.56124210357666]],[[5.104936599731445,11.050890922546387],[5.104936599731445,11.111701011657715]],[[5.104936599731445,11.111701011657715],[5.104936599731445,11.150890350341797]],[[4.7249369621276855,11.050890922546387],[4.7249369621276855,11.106987953186035]],[[4.7249369621276855,11.106987953186035],[4.7249369621276855,11.150890350341797]],[[3.704936981201172,11.150890350341797],[3.704936981201172,11.106987953186035]],[[3.704936981201172,11.106987953186035],[3.704936981201172,11.050890922546387]],[[4.954868316650391,1.877145528793335],[4.954868316650391,1.9356822967529297]],[[4.954868316650391,1.9356822967529297],[4.954868316650391,1.9771459102630615]],[[4.044868469238281,1.877145528793335],[4.044868469238281,1.9186091423034668]],[[4.044868469238281,1.9186091423034668],[4.044868469238281,1.9771459102630615]],[[5.83486795425415,3.047144651412964],[5.7483296394348145,3.047144651412964]],[[5.7483296394348145,3.047144651412964],[5.734868049621582,3.047144651412964]],[[6.434937000274658,3.321242094039917],[6.434937000274658,3.2773396968841553]],[[6.434937000274658,3.2773396968841553],[6.434937000274658,3.2212421894073486]],[[8.048595428466797,3.2212421894073486],[7.993493556976318,3.2212421894073486]],[[7.993493556976318,3.2212421894073486],[7.748595237731934,3.2212421894073486]],[[7.748595237731934,3.321242094039917],[7.803697109222412,3.321242094039917]],[[7.803697109222412,3.321242094039917],[8.048595428466797,3.321242094039917]],[[5.83486795425415,3.2212421894073486],[6.146903991699219,3.2212421894073486]],[[6.146903991699219,3.2212421894073486],[6.1532721519470215,3.2212421894073486]],[[8.444937705993652,3.2212421894073486],[8.238840103149414,3.2212421894073486]],[[8.048595428466797,3.2212421894073486],[8.238840103149414,3.2212421894073486]],[[6.1532721519470215,3.2212421894073486],[6.434937000274658,3.2212421894073486]],[[7.748595237731934,3.2212421894073486],[7.6718430519104,3.2212421894073486]],[[7.344936847686768,3.2212421894073486],[7.671843528747559,3.2212421894073486]],[[5.83486795425415,1.0471453666687012],[5.790965557098389,1.0471453666687012]],[[5.790965557098389,1.0471453666687012],[5.734868049621582,1.0471453666687012]],[[7.964937210083008,7.8805413246154785],[7.964937210083008,7.776723384857178]],[[7.964937210083008,7.776723384857178],[7.964937210083008,7.680891513824463]],[[5.104936599731445,11.050890922546387],[4.942079544067383,11.050890922546387]],[[3.3449368476867676,11.050890922546387],[3.532136917114258,11.050890922546387]],[[3.532136917114258,11.050890922546387],[3.5359573364257812,11.050890922546387]],[[8.34493637084961,11.050891876220703],[7.971532344818115,11.050891876220703]],[[7.80493688583374,11.050891876220703],[7.971532344818115,11.050891876220703]],[[3.5359573364257812,11.050890922546387],[3.704936981201172,11.050890922546387]],[[4.7249369621276855,11.050890922546387],[4.938107490539551,11.050890922546387]],[[4.942079544067383,11.050890922546387],[4.938107490539551,11.050890922546387]],[[5.83486795425415,1.9771459102630615],[5.821406364440918,1.9771459102630615]],[[5.821406364440918,1.9771459102630615],[5.734868049621582,1.9771459102630615]],[[3.3449368476867676,1.9771459102630615],[3.7089014053344727,1.9771459102630615]],[[4.044868469238281,1.9771459102630615],[3.7089014053344727,1.9771459102630615]],[[5.734868049621582,1.9771459102630615],[5.400582313537598,1.9771459102630615]],[[5.400582313537598,1.9771459102630615],[4.954868316650391,1.9771459102630615]]],"room_polygons":null,"sensors":[],"svg_transform":{"pixels_per_metre":80,"x_px":"85 + (x_m - xmin_m) * 80","y_px":"85 + (ymax_m - y_m) * 80","xmin_m":3.244936943054199,"ymax_m":11.150891304016113,"viewbox":[0,0,590,1120]},"model_bounds_m":[[3.244936943054199,-0.5228553414344788,1.1920928955078125e-07],[8.444937705993652,11.150891304016113,2.5]]};
@@ -331,9 +331,12 @@ function floorValidate(config){
   if(typeof s.id!=='string'||!/^[a-z][a-z0-9_-]{0,47}$/.test(s.id)||ids.has(s.id))throw Error('Sensor IDs must be unique and stable');
   ids.add(s.id);
   if(typeof s.name!=='string'||s.name.length>100)throw Error('Sensor name must be text (max 100 characters)');
+  for(const [key,value,min,max]of [['smoothing_ms',s.smoothing_ms??180,0,2000],['trail_seconds',s.trail_seconds??8,0,60],['scale',s.scale??1,.1,10],['display_min_range',s.display_min_range??0,0,6]])floorNumber(value,min,max,key);
+  if((s.display_min_range??0)>=s.fov_range)throw Error('Minimum display distance must be smaller than radius');
+  if(s.show_fov!==undefined&&typeof s.show_fov!=='boolean')throw Error('show_fov must be boolean');
   floorNumber(s.x,-1000,1000,'x');floorNumber(s.y,-1000,1000,'y');floorNumber(s.yaw,-360,360,'yaw');
   if(s.height!==null)floorNumber(s.height,0,10,'height');
-  if(s.calibrated&&s.height===null)throw Error('Record mounting height before confirming pose');floorNumber(s.tilt,-90,90,'tilt');
+  floorNumber(s.tilt,-90,90,'tilt');
   if(!['wall','ceiling'].includes(s.mounting)||typeof s.calibrated!=='boolean')throw Error('Invalid mounting/calibrated');
   floorNumber(s.fov_range,.1,6,'fov_range');floorNumber(s.fov_start,-60,60,'fov_start');floorNumber(s.fov_end,-60,60,'fov_end');
   if(s.fov_start>=s.fov_end)throw Error('FOV start must precede end');
@@ -341,11 +344,12 @@ function floorValidate(config){
  if(!c.hardware||Array.isArray(c.hardware)||typeof c.hardware!=='object')throw Error('hardware must be an object keyed by sensor ID');
  for(const [id,h] of Object.entries(c.hardware)){
   if(!ids.has(id)||!h||typeof h!=='object'||Array.isArray(h))throw Error('hardware must reference a placement');
+  for(const k of ['device_id','source_entity','entity_prefix'])if(h[k]!==undefined&&(typeof h[k]!=='string'||h[k].length>255))throw Error('Invalid source');
   for(const k of ['flip_x','flip_y','axes_confirmed'])if(h[k]!==undefined&&typeof h[k]!=='boolean')throw Error(`${k} must be boolean`);
   if(h.mode_entity!==undefined&&(typeof h.mode_entity!=='string'||!/^select\.[a-z0-9_]+$/.test(h.mode_entity)))throw Error('mode_entity must be a select entity ID');
-  if(!Array.isArray(h.targets)||h.targets.length>5)throw Error('hardware.targets: expected at most 5 explicit entity pairs');
+  if(!Array.isArray(h.targets||[])||(h.targets||[]).length>64)throw Error('hardware.targets: expected at most 64 explicit entity pairs');
   const pairs=new Set();
-  for(const t of h.targets){
+  for(const t of h.targets||[]){
    if(!t||typeof t!=='object')throw Error('Invalid target pair');
    for(const k of ['x_entity','y_entity'])if(typeof t[k]!=='string'||!/^sensor\.[a-z0-9_]+$/.test(t[k]))throw Error('Targets need explicit sensor entity IDs');
    if(t.x_entity===t.y_entity||pairs.has(t.x_entity)||pairs.has(t.y_entity))throw Error('Target entities must be distinct per roomnode');
@@ -359,7 +363,7 @@ function floorValidate(config){
 const floorToMap=([x,y])=>[jarvisGroundFloor.model_bounds_m[1][1]-y,jarvisGroundFloor.model_bounds_m[1][0]-x];
 const floorFromMap=([u,v])=>[jarvisGroundFloor.model_bounds_m[1][0]-v,jarvisGroundFloor.model_bounds_m[1][1]-u];
 function floorProject(s,h,x,y){
- const a=s.yaw*Math.PI/180,rx=x*(h.flip_x?-1:1),forward=y*(h.flip_y?-1:1);
+ const a=s.yaw*Math.PI/180,rx=x*(h.flip_x?-1:1)*(s.scale??1),forward=y*(h.flip_y?-1:1)*(s.scale??1);
  // Sensor +X = right, +Y = forward; world yaw 0 = +X, +90 = +Y.
  return [s.x+forward*Math.cos(a)+rx*Math.sin(a),s.y+forward*Math.sin(a)-rx*Math.cos(a)];
 }
@@ -368,12 +372,86 @@ function floorMetres(state){
  if(!scale||typeof state.state!=='string'||!state.state.trim())return null;
  const n=Number(state.state);return Number.isFinite(n)?n*scale:null;
 }
+// Resolve within one device (preferred) or one exact naming stem. Never choose
+// the first candidate: duplicate/disabled/missing entities need a visible diagnosis.
+const floorRegistryCache=new WeakMap();
+function floorRegistries(hass){
+ const connection=hass?.connection;if(!connection||!hass.callWS)return Promise.resolve({entities:[],devices:[],limited:true});
+ if(!floorRegistryCache.has(connection))floorRegistryCache.set(connection,Promise.allSettled([
+  hass.callWS({type:'config/entity_registry/list'}),hass.callWS({type:'config/device_registry/list'})
+ ]).then(([e,d])=>({entities:e.status==='fulfilled'?e.value:[],devices:d.status==='fulfilled'?d.value:[],limited:e.status!=='fulfilled',devicesLimited:d.status!=='fulfilled'})));
+ return floorRegistryCache.get(connection);
+}
+const floorWords=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+function floorDiscover(hass,source={},registry={entities:[]}){
+ const states=hass?.states||{},entries=registry.entities||[],byId=new Map(entries.map(e=>[e.entity_id,e]));
+ const anchor=source.source_entity,entry=byId.get(anchor),device=source.device_id||entry?.device_id;
+ let stem=source.entity_prefix?.replace(/^[a-z_]+\./,'');
+ if(!device&&anchor&&!/(?:tracking_)?target_\d+_[xy]$/.test(anchor))return {targets:[],polygons:{},counts:{},warnings:['Registry access is required for a renamed source. Choose an original target X/Y entity or restore registry access.']};
+ if(!device&&anchor)stem=anchor.replace(/^[^.]+\./,'').replace(/(?:tracking_)?target_\d+_[xy]$/,'');
+ const warnings=[];
+ if(stem==='')return {targets:[],polygons:{},counts:{},warnings:['Choose a source that isolates one roomnode.']};
+ if(!device&&!stem)return {targets:[],polygons:{},counts:{},warnings:['Choose a roomnode device or a target X/Y entity.']};
+ if(device&&!entries.length)return {targets:[],polygons:{},counts:{},warnings:['Device registry unavailable. Select a target X/Y entity as fallback.']};
+ const ids=device?entries.filter(e=>e.device_id===device&&!e.disabled_by).map(e=>e.entity_id):Object.keys(states).filter(id=>id.split('.')[1].startsWith(stem));
+ const candidates=new Map();
+ const add=(key,id)=>{if(!candidates.has(key))candidates.set(key,new Set());candidates.get(key).add(id);};
+ for(const id of ids){
+  const e=byId.get(id),domain=id.split('.')[0];
+  const names=[id.split('.')[1],e?.original_name,e?.unique_id,states[id]?.attributes?.friendly_name].map(floorWords);
+  for(const name of names){
+   let m=name.match(/(?:^|_)target_([1-9]\d*)_([xy])$/);if(m&&domain==='sensor')add(`target:${m[1]}:${m[2]}`,id);
+   m=name.match(/(?:^|_)polygon_(zone|exclusion)_([1-9]\d*)$/);if(m&&domain==='text')add(`${m[1]}:${m[2]}`,id);
+   m=name.match(/(?:^|_)(?:polygon_)?zone_([1-9]\d*)_target_count$/);if(m&&domain==='sensor')add(`count:${m[1]}`,id);
+   if(domain==='binary_sensor'&&/(?:^|_)(?:occupancy|presence|target_present)$/.test(name))add('occupancy',id);
+   if(domain==='select'&&name.endsWith('tracking_radar_installation_mode'))add('mode',id);
+   if(domain==='number'&&/tracking_radar_detection_(distance|start_angle|end_angle)$/.test(name))add(name.match(/(distance|start_angle|end_angle)$/)[1],id);
+  }
+ }
+ const one=key=>{const a=[...(candidates.get(key)||[])];if(a.length>1)warnings.push(`Ambiguous ${key}: ${a.join(', ')}. Rename or disable the duplicate on this device.`);return a.length===1?a[0]:null;};
+ const targets=[],numbers=[...new Set([...candidates.keys()].filter(k=>k.startsWith('target:')).map(k=>+k.split(':')[1]))].sort((a,b)=>a-b);
+ for(const n of numbers){const x=one(`target:${n}:x`),y=one(`target:${n}:y`);if(x&&y)targets.push({id:n,x_entity:x,y_entity:y});else warnings.push(`Target ${n}: X/Y pair incomplete or ambiguous. Check enabled ESPHome entities.`);}
+ const polygons={},counts={};for(const kind of ['zone','exclusion'])for(let n=1;n<=(kind==='zone'?4:2);n++){const id=one(`${kind}:${n}`);if(id)polygons[`${kind}:${n}`]=id;if(kind==='zone')counts[n]=one(`count:${n}`);}
+ if(!targets.length)warnings.push('No target pairs found. Select a target X/Y entity or enable tracking entities in ESPHome.');
+ if(!device)warnings.push('Using entity-name fallback; choose a device for renamed entities.');
+ return {targets,polygons,counts,occupancy:one('occupancy'),mode_entity:one('mode'),distance:one('distance'),start_angle:one('start_angle'),end_angle:one('end_angle'),warnings};
+}
+function floorResolve(hass,h,registry){
+ const discovered=floorDiscover(hass,h,registry);
+ return {...discovered,...h,targets:h.targets?.length?h.targets:discovered.targets,warnings:h.targets?.length&&!h.device_id&&!h.source_entity&&!h.entity_prefix?[]:discovered.warnings};
+}
+// Frames operate in model metres. Lost IDs have no marker; retained trails fade
+// separately, and a reused ID starts a new path rather than joining two people.
+function floorStep(tracks,desired,now,dt){
+ for(const [key,t]of tracks)if(!desired.has(key))t.active=false;
+ for(const [key,d]of desired){
+  let t=tracks.get(key);if(!t||!t.active){t={point:[...d.point],trail:[],active:true};tracks.set(key,t);}
+  Object.assign(t,{active:true,color:d.color,label:d.label,duration:d.duration});
+  const alpha=d.smoothing===0?1:1-Math.exp(-Math.min(100,Math.max(0,dt))/d.smoothing);
+  t.point=t.point.map((v,i)=>v+alpha*(d.point[i]-v));
+  const last=t.trail.at(-1);if(d.duration&&(!last||Math.hypot(...t.point.map((v,i)=>v-last.point[i]))>.02))t.trail.push({point:[...t.point],time:now});
+ }
+ for(const [key,t]of tracks){t.trail=t.trail.filter(p=>now-p.time<t.duration).slice(-120);if(!t.active&&!t.trail.length)tracks.delete(key);}
+}
+// Pure conversion keeps every legacy option for rollback and uses the existing
+// orientation and display settings; only physical placement is supplied by user.
+function floorConvertLegacy(config,id,legacy){
+ if(legacy.type!=='custom:jarvis-target-card'||!legacy.entity_prefix)throw Error('Expected an existing Jarvis target card');
+ const c=floorClone(config),s=c.placements.find(s=>s.id===id);if(!s)throw Error('Select a sensor first');
+ c.hardware[id]={...c.hardware[id],entity_prefix:legacy.entity_prefix,targets:[],flip_x:!!legacy.flip_x,flip_y:!!legacy.flip_y,legacy_card:floorClone(legacy)};
+ Object.assign(s,{smoothing_ms:legacy.smoothing_ms??180,trail_seconds:legacy.trail_seconds??8,show_fov:legacy.show_fov??true,fov_range:legacy.fov_range??6,fov_start:legacy.display_start_angle??-(legacy.fov_angle??120)/2,fov_end:legacy.display_end_angle??(legacy.fov_angle??120)/2,display_min_range:legacy.display_min_range??0});
+ return floorValidate(c);
+}
+window.jarvisConvertTargetCard=floorConvertLegacy;
 class JarvisFloorplanCard extends HTMLElement {
- constructor(){super();this.attachShadow({mode:'open'});}
+ constructor(){super();this.attachShadow({mode:'open'});this._tracks=new Map();this._desired=new Map();this._registry={entities:[]};}
+ connectedCallback(){this._start();}
+ disconnectedCallback(){cancelAnimationFrame(this._raf);this._raf=0;}
+ _start(){if(this.isConnected&&!this._raf)this._raf=requestAnimationFrame(t=>this._animate(t));}
  static getStubConfig(){return floorDefaults();}
  static getConfigElement(){return document.createElement('jarvis-floorplan-card-editor');}
- setConfig(config){this._config=floorValidate(config);this._render();}
- set hass(hass){this._hass=hass;this._refreshLive();}
+ setConfig(config){this._config=floorValidate(config);this._tracks.clear();this._render();this._start();}
+ set hass(hass){this._hass=hass;this._refreshLive();if(this._registryConnection!==hass.connection||!this._registryLoaded){this._registryConnection=hass.connection;this._registryLoaded=true;floorRegistries(hass).then(r=>{if(this._hass?.connection!==hass.connection)return;this._registry=r;this._render();});}}
  getCardSize(){return 7;}
  getGridOptions(){return {columns:12,rows:7,min_columns:6,min_rows:4};}
  _node(parent,tag,attrs={},text){
@@ -386,12 +464,12 @@ class JarvisFloorplanCard extends HTMLElement {
   this.shadowRoot.innerHTML=`<style>
    :host{display:block}ha-card{display:block;padding:16px;overflow:hidden}h2{font-size:20px;margin:0 0 8px}
    svg{display:block;width:100%;background:#fafcfe;color:#172b40;touch-action:pan-y;aspect-ratio:14.4/7.8}
-   .status{font-size:13px;line-height:1.5} .sensor{cursor:default} .sensor text{font:0.18px sans-serif}
+   .status{font-size:13px;line-height:1.5} .sensor{cursor:pointer} .sensor text{font:0.18px sans-serif}
    .fov{opacity:.10;pointer-events:none} .target{stroke:white;stroke-width:.025}
    :host([editing]) svg{touch-action:none}:host([editing]) .sensor{cursor:grab}
   </style><ha-card><h2></h2><div class="status"></div><svg role="img" aria-label="Ground-floor geometry in metres" viewBox="-1.4 -1.3 14.4 7.8" preserveAspectRatio="xMidYMid meet"></svg><p class="status">Model metres; grid 1 m. Schematic sectors, without wall occlusion. Edit and save this card in Lovelace to persist placement.</p><div id="live-status" class="status" role="status"></div></ha-card>`;
   this.shadowRoot.querySelector('h2').textContent=this._config.title||'Begane grond';
-  this.shadowRoot.querySelector('.status').textContent=this._config.calibration.dimensions_confirmed?'Dimensions marked as checked; sensor calibration is separate.':'Uncalibrated prototype: check two independent dimensions and every sensor pose.';
+  this.shadowRoot.querySelector('.status').textContent=this._config.calibration.dimensions_confirmed?'Floorplan scale checked.':'Placement preview — verify position and scale visually. Targets remain visible.';
   const svg=this.shadowRoot.querySelector('svg');
   for(let u=0;u<=12;u++)this._node(svg,'line',{x1:u,y1:0,x2:u,y2:5.2,stroke:'#dde5ec','stroke-width':.012});
   for(let v=0;v<=5;v++)this._node(svg,'line',{x1:0,y1:v,x2:11.674,y2:v,stroke:'#dde5ec','stroke-width':.012});
@@ -400,50 +478,105 @@ class JarvisFloorplanCard extends HTMLElement {
   this._node(svg,'path',{d:'M0,5.55 H1 M0,5.48 V5.62 M1,5.48 V5.62',stroke:'#172b40','stroke-width':.025});
   this._node(svg,'text',{x:0,y:5.9,'font-size':.18},'1 m • model scale, no geographic north');
   for(const [i,s]of this._config.placements.entries()){
-   const color=i===0?'#139b32':i===1?'#245aff':'#a548b0',center=floorToMap([s.x,s.y]),tip=floorToMap(floorProject(s,{},0,.5));
-   if(s.mounting==='wall'&&s.tilt===0){
-    const points=[center];for(let j=0;j<=48;j++){const a=(s.fov_start+(s.fov_end-s.fov_start)*j/48)*Math.PI/180;points.push(floorToMap(floorProject(s,{},s.fov_range*Math.sin(a),s.fov_range*Math.cos(a))));}
+   const h=this._source(s),color=i===0?'#139b32':i===1?'#245aff':'#a548b0',center=floorToMap([s.x,s.y]),tip=floorToMap(floorProject(s,{},0,.5));
+   if(s.show_fov!==false&&s.mounting==='wall'&&s.tilt===0){
+    const points=[center];for(let j=0;j<=48;j++){const a=(s.fov_start+(s.fov_end-s.fov_start)*j/48)*Math.PI/180;points.push(floorToMap(floorProject(s,h,s.fov_range*Math.sin(a),s.fov_range*Math.cos(a))));}
     this._node(sectors,'polygon',{points:points.map(p=>p.join(',')).join(' '),fill:color,class:'fov'});
    }
-   const g=this._node(svg,'g',{'data-sensor':s.id,class:'sensor',tabindex:this.hasAttribute('editing')?0:-1,role:'img','aria-label':`${s.name}: ${s.x.toFixed(2)}, ${s.y.toFixed(2)} m; yaw ${s.yaw} degrees`});
+   const g=this._node(svg,'g',{'data-sensor':s.id,class:'sensor',tabindex:0,role:'button','aria-label':`${s.name}: ${s.x.toFixed(2)}, ${s.y.toFixed(2)} m; yaw ${s.yaw} degrees`});
    this._node(g,'line',{x1:center[0],y1:center[1],x2:tip[0],y2:tip[1],stroke:color,'stroke-width':.055,'pointer-events':'none'});
    this._node(g,'circle',{cx:center[0],cy:center[1],r:.11,fill:color,stroke:'transparent','stroke-width':24,'vector-effect':'non-scaling-stroke'});
    this._node(g,'text',{x:center[0]+.15,y:center[1]-.15,fill:color},s.name);
    if(this.hasAttribute('editing')){this._node(g,'circle',{cx:tip[0],cy:tip[1],r:.085,fill:'white',stroke:color,'stroke-width':.035,'pointer-events':'none'});this._node(g,'circle',{cx:tip[0],cy:tip[1],r:.085,fill:'white',stroke:'transparent','stroke-width':12,'vector-effect':'non-scaling-stroke','data-rotate':s.id});}
   }
+  this._polygonLayer=this._node(svg,'g',{'data-layer':'polygons','pointer-events':'none'});
   this._liveLayer=this._node(svg,'g',{'data-layer':'targets','pointer-events':'none'});this._refreshLive();
+  for(const g of svg.querySelectorAll('[data-sensor]')){
+   const open=()=>this.dispatchEvent(new CustomEvent('sensor-selected',{detail:{id:g.dataset.sensor},bubbles:true,composed:true}));
+   g.onclick=()=>{if(!this.hasAttribute('editing'))this._openSensor(g.dataset.sensor);else open();};
+   g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();g.onclick();}};
+  }
+
  }
- _reason(s){
-  const h=this._config.hardware[s.id];
-  if(s.mounting!=='wall'||s.tilt!==0)return 'ceiling/tilted projection not implemented';
-  if(!this._config.calibration.dimensions_confirmed||!s.calibrated)return 'dimensions or pose not calibrated';
-  if(!h||!h.axes_confirmed)return 'hardware axes not confirmed';
-  if(h.mode_entity&&this._hass?.states?.[h.mode_entity]?.state!=='side')return 'device mode is not confirmed side';
-  if(!h.targets.length)return 'no target entity pairs configured';
+ _source(s){return floorResolve(this._hass,this._config.hardware[s.id]||{},this._registry);}
+ _reason(s,h=this._source(s)){
+  if(s.mounting!=='wall'||s.tilt!==0)return 'Ceiling/tilted projection is not yet supported; placement is saved, targets are not projected.';
+  if(h.mode_entity&&this._hass?.states?.[h.mode_entity]?.state!=='side')return 'Device mounting mode is not Side. Check hardware settings in ESPHome.';
+  if(!h.targets.length)return h.warnings.join(' ');
   return null;
  }
  _refreshLive(){
   if(!this._liveLayer||!this._config)return;
-  this._liveLayer.replaceChildren();const status=[];
+  this._desired=new Map();this._polygonLayer?.replaceChildren();const status=[];
   for(const [i,s]of this._config.placements.entries()){
-   const reason=this._reason(s);if(reason){status.push(`${s.name}: ${reason}`);continue;}
-   const h=this._config.hardware[s.id];let count=0;
+   const h=this._source(s),reason=this._reason(s,h),color=['#139b32','#245aff','#a548b0'][i%3];
+   if(reason){status.push(`${s.name}: ${reason}`);continue;}
+   let count=0,invalid=0;
    for(const [j,t]of h.targets.entries()){
     const x=floorMetres(this._hass?.states?.[t.x_entity]),y=floorMetres(this._hass?.states?.[t.y_entity]);
-    // Unknown/unavailable, absent units and the firmware's empty (0,0) slot are omitted.
-    if(x===null||y===null||(x===0&&y===0)||Math.hypot(x,y)>6)continue;
-    const [cx,cy]=floorToMap(floorProject(s,h,x,y));count++;
-    this._node(this._liveLayer,'circle',{cx,cy,r:.085,fill:i===0?'#139b32':'#245aff',class:'target'});
-    this._node(this._liveLayer,'text',{x:cx+.12,y:cy,'font-size':.16},`${s.name} T${j+1}`);
+    if(x===null||y===null){invalid++;continue;}
+    if((x===0&&y===0)||Math.hypot(x,y)>6)continue;
+    this._desired.set(`${s.id}:${t.x_entity}:${t.y_entity}`,{point:floorToMap(floorProject(s,h,x,y)),color,label:`${s.name} T${t.id??j+1}`,smoothing:s.smoothing_ms??180,duration:(s.trail_seconds??8)*1000});count++;
    }
-   status.push(`${s.name}: ${count} valid target slots (no identity/fusion)`);
+   if(s.show_fov!==false){
+    const read=(id,angle=false)=>{const state=this._hass?.states?.[id];return angle?(state?.attributes?.unit_of_measurement==='°'&&String(state.state).trim()?Number(state.state):NaN):floorMetres(state);};
+    const r=read(h.distance),start=read(h.start_angle,true),end=read(h.end_angle,true);
+    if(r>0&&r<=6&&Number.isFinite(start)&&Number.isFinite(end)&&start>=-60&&end<=60&&start<end){
+     const points=[floorToMap([s.x,s.y])];for(let j=0;j<=48;j++){const a=(start+(end-start)*j/48)*Math.PI/180;points.push(floorToMap(floorProject(s,h,r*Math.sin(a),r*Math.cos(a))));}
+     this._node(this._polygonLayer,'polygon',{points:points.map(p=>p.join(',')).join(' '),fill:'none',stroke:'#64748b','stroke-width':.025,'stroke-dasharray':'.08 .05'});
+    }
+   }
+   for(const [key,id]of Object.entries(h.polygons)){
+    const points=JarvisTargetCard.prototype._parse(this._hass?.states?.[id]?.state);
+    if(points?.length)this._node(this._polygonLayer,'polygon',{points:points.map(p=>floorToMap(floorProject(s,h,...p)).join(',')).join(' '),fill:key.startsWith('zone')?color:'#ef4444','fill-opacity':.07,stroke:key.startsWith('zone')?color:'#ef4444','stroke-width':.025,'stroke-dasharray':key.startsWith('zone')?'':'.08 .05'});
+   }
+   const occupancy=h.occupancy?this._hass?.states?.[h.occupancy]?.state:null;
+   status.push(`${s.name}: ${count} targets${occupancy?` · presence ${occupancy}`:''}${!s.calibrated?' · placement not verified':''}${invalid?' · X/Y unavailable or units missing':''}${h.warnings.length?' · '+h.warnings.join(' '):''}`);
   }
-  this.shadowRoot.querySelector('#live-status').textContent=status.join(' · ');
+  this.shadowRoot.querySelector('#live-status').textContent=status.join(' | ');
+  for(const local of this.shadowRoot.querySelectorAll('jarvis-target-card'))local.hass=this._hass;
+  this._drawFrame(performance.now(),0);this._start();
  }
+ _drawFrame(now,dt){
+  floorStep(this._tracks,this._desired,now,dt);if(!this._liveLayer)return;
+  this._liveLayer.replaceChildren();
+  for(const t of this._tracks.values()){
+   // Group samples into eight opacity bands: bounded SVG nodes even for many sensors.
+   for(let band=0;band<8;band++){
+    let d='';for(let i=1;i<t.trail.length;i++){const p=t.trail[i],a=t.trail[i-1],b=Math.min(7,Math.floor(8*(now-p.time)/t.duration));if(b===band)d+=`M${a.point.join(',')}L${p.point.join(',')}`;}
+    if(d)this._node(this._liveLayer,'path',{d,fill:'none',stroke:t.color,'stroke-width':.035,opacity:(1-band/8)*.65});
+   }
+   if(t.active){const[cx,cy]=t.point;this._node(this._liveLayer,'circle',{cx,cy,r:.085,fill:t.color,class:'target'});this._node(this._liveLayer,'text',{x:cx+.12,y:cy,'font-size':.16},t.label);}
+  }
+ }
+ _animate(now){this._raf=0;if(!this.isConnected)return;this._drawFrame(now,Math.min(100,now-(this._lastFrame??now)));this._lastFrame=now;this._start();}
+ _openSensor(id){
+  this.shadowRoot.querySelector('#sensor-dialog')?.remove();
+  const dialog=document.createElement('dialog');dialog.id='sensor-dialog';dialog.style.cssText='width:min(900px,85vw);max-height:85vh;overflow:auto';
+  const close=document.createElement('button');close.textContent='Close';close.onclick=()=>dialog.close();
+  const note=document.createElement('p');note.textContent='Sensor settings. To change placement or source, use Edit dashboard → Edit card → select this sensor, then Save.';
+  const s=this._config.placements.find(p=>p.id===id),h=this._source(s),info=document.createElement('p');info.textContent=`${s.name} · ${s.mounting} · ${h.targets.length} X/Y pairs · rotation ${s.yaw}°`;
+  dialog.append(close,note,info);this._appendPolygonEditor(dialog,s,h);this.shadowRoot.append(dialog);dialog.showModal();
+ }
+ _appendPolygonEditor(root,s,h){
+  const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Edit ESPHome polygons / hardware view';details.append(summary);root.append(details);
+  const local=document.createElement('jarvis-target-card');
+  local.setConfig({...h.legacy_card,entity_prefix:h.entity_prefix||'sensor.jarvis_',title:`${s.name} — sensor-local polygons`,flip_x:!!h.flip_x,flip_y:!!h.flip_y,smoothing_ms:s.smoothing_ms??180,trail_seconds:s.trail_seconds??8,show_fov:s.show_fov??true,fov_range:s.fov_range,display_start_angle:s.fov_start,display_end_angle:s.fov_end,display_min_range:s.display_min_range??0});
+  // Use the same device resolver for renamed text and number entities.
+  local._zoneId=(kind,n)=>h.polygons[`${kind}:${n}`]||null;
+  local._zoneCount=n=>{const v=this._hass?.states?.[h.counts[n]]?.state;return v!==undefined&&v!==''&&Number.isInteger(+v)?+v:null;};
+  local._radarEntity=(domain,suffix)=>this._hass?.states?.[h[({tracking_radar_detection_distance:'distance',tracking_radar_detection_start_angle:'start_angle',tracking_radar_detection_end_angle:'end_angle',tracking_radar_installation_mode:'mode_entity'})[suffix]]];
+  local._sideMount=()=>!h.mode_entity||this._hass?.states?.[h.mode_entity]?.state==='side';
+  local._readTargets=()=>{const coords=new Map();for(const [i,t]of h.targets.entries()){const x=floorMetres(this._hass?.states?.[t.x_entity]),y=floorMetres(this._hass?.states?.[t.y_entity]);if(x!==null&&y!==null&&(x||y)&&Math.hypot(x,y)<=6)coords.set(t.id??i+1,local._transform(x,y));}return {coords,found:h.targets.length};};
+  details.ontoggle=()=>{if(details.open){details.append(local);local.hass=this._hass;}else local.remove();};
+ }
+
 }
 class JarvisFloorplanCardEditor extends HTMLElement {
  constructor(){super();this.attachShadow({mode:'open'});this._selected='kantoor';}
- set hass(hass){this._hass=hass;if(this._preview)this._preview.hass=hass;}
+ set hass(hass){this._hass=hass;if(this._preview)this._preview.hass=hass;for(const local of this.shadowRoot.querySelectorAll('jarvis-target-card'))local.hass=hass;
+  if(this._connection!==hass.connection||!this._registry){this._connection=hass.connection;floorRegistries(hass).then(r=>{if(this._hass?.connection!==hass.connection)return;this._registry=r;if(this._preview){this._preview._registry=r;this._preview._render();}this._sourceOptions();const tools=this.shadowRoot.querySelector('#polygon-tools');if(tools&&!tools.querySelector('details[open]')){tools.replaceChildren();const s=this._selectedPose();if(s)this._preview._appendPolygonEditor(tools,s,this._preview._source(s));}});}
+ }
  setConfig(config){
   // Home Assistant echoes emitted configs; retain focus and pointer capture.
   if(this._lastEmitted===JSON.stringify(config))return;
@@ -459,17 +592,30 @@ class JarvisFloorplanCardEditor extends HTMLElement {
   this.shadowRoot.innerHTML=`<style>:host{display:block}label{display:inline-flex;flex-direction:column;gap:4px;margin:6px;max-width:100%;font:14px system-ui}input,select,button,textarea{font:inherit;box-sizing:border-box;max-width:100%}input[type=number]{width:135px}textarea{display:block;width:100%;min-height:170px}#error{color:var(--error-color,#b42318)}p{line-height:1.5}button{margin:6px}jarvis-floorplan-card{display:block}</style>
    <p>Drag a sensor circle to move; drag its white handle to rotate. Numeric fields also support keyboard editing. Save the Lovelace card/dashboard to persist. These controls never write to ESPHome.</p>
    <jarvis-floorplan-card editing></jarvis-floorplan-card><label>Sensor<select id="sensor"></select></label><div id="fields"></div>
-   <label><span>Two independent physical dimensions checked</span><input id="dimensions" type="checkbox"></label>
-   <details><summary>Hardware entity mapping (separate from placement)</summary><p>Explicit sensor IDs → targets [{x_entity, y_entity}], flip_x, flip_y, axes_confirmed; optional mode_entity. Set axes_confirmed only after a physical coordinate check. No automatic entity discovery or device writes.</p><textarea id="hardware" aria-label="Hardware JSON"></textarea><button id="apply-hardware">Use hardware mapping</button></details>
+   <button id="add">Add sensor</button><button id="remove">Remove selected sensor</button>
+   <details><summary>Import settings from an old radar card</summary><p>Paste the old card configuration (flat YAML or JSON). This copies display settings and discovers all targets from its source. Set the physical position on this floorplan and save before removing the old card.</p><textarea id="legacy" aria-label="Old radar card configuration"></textarea><button id="import">Import into selected sensor</button></details>
    <p id="error" role="alert"></p>`;
   this._preview=this.shadowRoot.querySelector('jarvis-floorplan-card');this._preview.setConfig(this._config);if(this._hass)this._preview.hass=this._hass;
   const select=this.shadowRoot.querySelector('#sensor');
   for(const s of this._config.placements){const o=document.createElement('option');o.value=s.id;o.textContent=s.name;select.append(o);}select.value=this._selected||'';
   select.onchange=()=>{this._selected=select.value;this._fields();};this._fields();
-  const dimensions=this.shadowRoot.querySelector('#dimensions');dimensions.checked=this._config.calibration.dimensions_confirmed;
-  dimensions.onchange=()=>this._try(()=>this._emit({...this._config,calibration:{...this._config.calibration,dimensions_confirmed:dimensions.checked}}));
-  const hardware=this.shadowRoot.querySelector('#hardware');hardware.value=JSON.stringify(this._config.hardware,null,2);
-  this.shadowRoot.querySelector('#apply-hardware').onclick=()=>this._try(()=>this._emit({...this._config,hardware:JSON.parse(hardware.value)}));
+  this.shadowRoot.querySelector('#add').onclick=()=>this._try(()=>{
+   let n=1;while(this._config.placements.some(s=>s.id===`sensor-${n}`))n++;
+   const id=`sensor-${n}`;this._selected=id;
+   this._emit({...this._config,placements:[...this._config.placements,{...floorDefaults().placements[0],id,name:`Roomnode ${n}`,x:6,y:6,yaw:0}]});this._build();
+  });
+  this.shadowRoot.querySelector('#remove').onclick=()=>this._try(()=>{const hardware={...this._config.hardware};delete hardware[this._selected];this._emit({...this._config,hardware,placements:this._config.placements.filter(s=>s.id!==this._selected)});this._selected=this._config.placements[0]?.id;this._build();});
+  this.shadowRoot.querySelector('#import').onclick=()=>this._try(()=>{
+   const text=this.shadowRoot.querySelector('#legacy').value.trim();let legacy;
+   if(text.startsWith('{'))legacy=JSON.parse(text);
+   else {legacy={};for(const line of text.split('\n')){
+    if(!line.trim()||line.trim().startsWith('#'))continue;
+    const m=line.match(/^([a-z_]+):\s*(.*?)\s*$/);if(!m)throw Error('Use the original flat card YAML; nested options can be imported as JSON.');
+    const raw=m[2];legacy[m[1]]=raw==='true'?true:raw==='false'?false:raw!==''&&Number.isFinite(Number(raw))?Number(raw):raw.replace(/^['"]|['"]$/g,'');
+   }}
+   this._emit(floorConvertLegacy(this._config,this._selected,legacy));this._fields();
+  });
+  this._preview.addEventListener('sensor-selected',e=>{this._selected=e.detail.id;select.value=this._selected;this._fields();});
   // Capture on the preview host, which survives redraws. Pointer positions use inverse SVG CTM.
   this._preview.addEventListener('pointerdown',e=>this._down(e));
   this._preview.addEventListener('pointermove',e=>this._move(e));
@@ -480,19 +626,46 @@ class JarvisFloorplanCardEditor extends HTMLElement {
  _try(fn){try{fn();this.shadowRoot.querySelector('#error').textContent='';}catch(e){this.shadowRoot.querySelector('#error').textContent=e.message;}}
  _fields(){
   const root=this.shadowRoot.querySelector('#fields');root.replaceChildren();const s=this._selectedPose();if(!s)return;
-  for(const [key,label,min,max,step]of [['x','World X (m)',-1000,1000,.01],['y','World Y (m)',-1000,1000,.01],['yaw','Yaw: 0 = +X, 90 = +Y (°)',-360,360,1],['height','Mounting height (m)',0,10,.01],['tilt','Downward tilt (°)',-90,90,1],['fov_range','Display radius (m)',.1,6,.1],['fov_start','Local FOV start (°)',-60,60,1],['fov_end','Local FOV end (°)',-60,60,1]]){
-   const l=document.createElement('label');l.textContent=label;const input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step=step;input.value=typeof s[key]==='number'?Number(s[key].toFixed(3)):'';input.dataset.field=key;l.append(input);root.append(l);
+  const advanced=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Position, field of view and movement';advanced.append(summary);root.append(advanced);
+  for(const [key,label,min,max,step]of [['scale','Visual distance scale',.1,10,.01],['smoothing_ms','Movement smoothing (ms)',0,2000,10],['trail_seconds','Trail length (seconds)',0,60,1],['x','Position X (m)',-1000,1000,.01],['y','Position Y (m)',-1000,1000,.01],['yaw','Rotation (°)',-360,360,1],['height','Mounting height (m)',0,10,.01],['tilt','Downward tilt (°)',-90,90,1],['fov_range','Display radius (m)',.1,6,.1],['fov_start','Local FOV start (°)',-60,60,1],['fov_end','Local FOV end (°)',-60,60,1]]){
+   const l=document.createElement('label');l.textContent=label;const input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step=step;input.value=typeof s[key]==='number'?Number(s[key].toFixed(3)):({scale:1,smoothing_ms:180,trail_seconds:8}[key]??'');input.dataset.field=key;l.append(input);(key==='scale'?root:advanced).append(l);
    input.onchange=()=>this._try(()=>{if(!input.value.trim()&&key!=='height')throw Error('A numeric value is required');this._changePose({[key]:input.value.trim()?Number(input.value):null});});
   }
   const label=document.createElement('label');label.textContent='Mounting';const select=document.createElement('select');select.dataset.field='mounting';
   for(const value of ['wall','ceiling']){const option=document.createElement('option');option.value=value;option.textContent=value;select.append(option);}select.value=s.mounting;select.onchange=()=>this._try(()=>this._changePose({mounting:select.value}));label.append(select);root.append(label);
-  const l=document.createElement('label');l.textContent='Pose physically calibrated';const input=document.createElement('input');input.type='checkbox';input.dataset.field='calibrated';input.checked=s.calibrated;input.onchange=()=>this._try(()=>this._changePose({calibrated:input.checked}));l.append(input);root.append(l);
+  const done=document.createElement('button');done.dataset.placementCheck='';done.textContent=s.calibrated?'Placement verified':'Mark placement as visually checked';done.onclick=()=>this._try(()=>{this._changePose({calibrated:true});this._fields();});root.append(done);
+  const name=document.createElement('input');name.value=s.name;name.dataset.field='name';name.setAttribute('aria-label','Sensor name');name.onchange=()=>this._try(()=>this._changePose({name:name.value}));const nameLabel=document.createElement('label');nameLabel.textContent='Sensor name';nameLabel.append(name);root.prepend(nameLabel);
+  const sourceLabel=document.createElement('label');sourceLabel.textContent='Roomnode device or target X/Y entity';const source=document.createElement('select');source.id='source';sourceLabel.append(source);root.prepend(sourceLabel);
+  source.onchange=()=>this._try(()=>{const value=source.value,[kind,...parts]=value.split(':');const h={...this._config.hardware[s.id],targets:[]};delete h.device_id;delete h.source_entity;delete h.entity_prefix;if(kind==='device')h.device_id=parts.join(':');if(kind==='entity')h.source_entity=parts.join(':');this._changeHardware(h);this._fields();});
+  for(const [key,labelText]of [['flip_x','Mirror left / right'],['flip_y','Mirror forward / backward']]){
+   const label=document.createElement('label'),box=document.createElement('input');label.textContent=labelText;box.type='checkbox';box.checked=!!this._config.hardware[s.id]?.[key];box.dataset.field=key;box.onchange=()=>this._try(()=>this._changeHardware({...this._config.hardware[s.id],[key]:box.checked}));label.append(box);root.append(label);
+  }
+  const fov=document.createElement('label'),box=document.createElement('input');fov.textContent='Show field of view';box.type='checkbox';box.checked=s.show_fov!==false;box.dataset.field='show_fov';box.onchange=()=>this._try(()=>this._changePose({show_fov:box.checked}));fov.append(box);root.append(fov);
+  const diagnostic=document.createElement('p');diagnostic.id='discovery';diagnostic.setAttribute('role','status');root.append(diagnostic);
+  this._sourceOptions();
+  const refresh=document.createElement('button');refresh.textContent='Refresh device discovery';refresh.onclick=()=>{if(this._hass?.connection)floorRegistryCache.delete(this._hass.connection);this._registry=null;this.hass=this._hass;};root.append(refresh);
+  const hint=document.createElement('p');hint.textContent='Display calibration only: move, rotate or adjust scale to match your room. This does not change hardware axes, mounting mode or zones. Ceiling/tilted placement is stored for future projection; it does not currently display floor targets.';root.append(hint);
+  const tools=document.createElement('div');tools.id='polygon-tools';root.append(tools);if(this._hass)this._preview._appendPolygonEditor(tools,s,this._preview._source(s));
+ }
+ _changeHardware(h){this._emit({...this._config,hardware:{...this._config.hardware,[this._selected]:h}});}
+ _sourceOptions(){
+  const select=this.shadowRoot.querySelector('#source'),s=this._selectedPose();if(!select||!s)return;
+  const h=this._config.hardware[s.id]||{},selected=h.device_id?`device:${h.device_id}`:h.source_entity?`entity:${h.source_entity}`:'';
+  select.replaceChildren();const add=(value,text)=>{const o=document.createElement('option');o.value=value;o.textContent=text;select.append(o);};add('','Choose roomnode…');
+  const registry=this._registry||{entities:[],devices:[]};
+  const devices=new Set((registry.entities||[]).filter(e=>[e.entity_id,e.original_name,e.unique_id].some(v=>/target[ _]\d+[ _][xy]$/i.test(v||''))).map(e=>e.device_id));
+  for(const d of registry.devices||[])if(devices.has(d.id))add(`device:${d.id}`,d.name_by_user||d.name||d.id);
+  for(const [id,state]of Object.entries(this._hass?.states||{}))if(/target_\d+_[xy]$/.test(id))add(`entity:${id}`,`${state.attributes?.friendly_name||id} (${id})`);
+  if(selected&&![...select.options].some(o=>o.value===selected))add(selected,`Saved source (${selected}) — unavailable`);
+  select.value=selected;
+  const resolved=floorResolve(this._hass,h,registry),diagnostic=this.shadowRoot.querySelector('#discovery');
+  if(diagnostic)diagnostic.textContent=`${resolved.targets.length} target pairs · ${Object.keys(resolved.polygons).length} polygons. ${resolved.warnings.join(' ')}`;
  }
  _changePose(patch){
   // Moving any physical pose invalidates its previous calibration.
-  const invalidate=['x','y','yaw','height','tilt','mounting'].some(k=>Object.hasOwn(patch,k));
+  const invalidate=['x','y','yaw','height','tilt','mounting','scale'].some(k=>Object.hasOwn(patch,k));
   this._emit({...this._config,placements:this._config.placements.map(s=>s.id===this._selected?{...s,...patch,...(invalidate?{calibrated:false}:{})}:s)});
-  if(invalidate){const box=this.shadowRoot.querySelector('[data-field="calibrated"]');if(box)box.checked=false;}
+  if(invalidate){const button=this.shadowRoot.querySelector('[data-placement-check]');if(button)button.textContent='Mark placement as visually checked';}
  }
  _point(e){
   const svg=this._preview.shadowRoot.querySelector('svg'),m=svg.getScreenCTM();if(!m)throw Error('SVG is not visible');
@@ -519,4 +692,4 @@ class JarvisFloorplanCardEditor extends HTMLElement {
 }
 if(!customElements.get('jarvis-floorplan-card'))customElements.define('jarvis-floorplan-card',JarvisFloorplanCard);
 if(!customElements.get('jarvis-floorplan-card-editor'))customElements.define('jarvis-floorplan-card-editor',JarvisFloorplanCardEditor);
-if(!window.customCards.some(x=>x.type==='jarvis-floorplan-card'))window.customCards.push({type:'jarvis-floorplan-card',name:'Jarvis Ground Floor',description:'Metre floorplan, independent roomnode poses and calibrated live targets'});
+if(!window.customCards.some(x=>x.type==='jarvis-floorplan-card'))window.customCards.push({type:'jarvis-floorplan-card',name:'Jarvis Ground Floor',description:'Roomnodes, smooth live targets and ESPHome polygons on one floorplan'});

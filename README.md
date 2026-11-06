@@ -6,6 +6,29 @@ An optional Home Assistant Marketplace / HACS **Dashboard plugin** for existing
 ESPHome LD2460 roomnodes. No Python integration, configuration flow or Helper is
 required. This migration retains the existing target card and its configuration.
 
+## Integrated floorplan (next version)
+
+**Jarvis Ground Floor** is the primary card. Add `custom:jarvis-floorplan-card`,
+open its visual editor, choose each roomnode device (or one target X/Y entity),
+and drag its icon and rotation handle. Click an icon for its settings. Save in
+Lovelace to persist. Targets, occupancy and polygons are linked automatically;
+no per-target JSON or calibration-checkbox sequence is needed. Live targets
+remain visible while placement is unverified, with smoothing and fading trails.
+
+The sensor panel contains the polygon/hardware tool. **Apply to ESPHome** is
+still an explicit action. Display changes never program hardware. The old radar
+card is absent from the picker; existing configurations remain readable during
+migration. Keep the JavaScript resource for the integrated floorplan.
+
+See [the placement/source guide](docs/integrated-floorplan.md) and
+[safe migration](docs/migration.md). The older examples below describe the
+legacy radar card and remain useful when importing an existing configuration.
+For a new dashboard, start with:
+
+```yaml
+type: custom:jarvis-floorplan-card
+```
+
 ## Installation
 
 Add `https://github.com/martijnkoot/jarvis-room-configurator` as a custom
@@ -94,8 +117,8 @@ commands or erase device polygons. Remove its dashboard cards and resource too.
 See [ADR-001](docs/ADR-001-independence.md).
 
 The existing radar view assumes side/wall mounting with forward-positive Y.
-Ceiling projection remains unsupported. A separate ground-floor prototype is
-now available; see the floorplan section below. Automated tests
+Ceiling projection remains unsupported. The integrated floorplan is now the
+primary card; see the guide above. Automated tests
 cover standalone loading and core behavior with simulated Home Assistant states;
 they do not establish real browser rendering, HACS installation or firmware
 persistence. Verify these in a test installation before production migration.
@@ -242,16 +265,11 @@ responsive-layout and editor round-trip checks, run
 The fixture uses synthetic HA state and a service recorder; it never connects to HA.
 See [validation results and limits](docs/responsive-display-validation.md).
 
-## Ground-floor editor (feature; no release)
+## Floorplan geometry and migration
 
-Add `type: custom:jarvis-floorplan-card` using the same JavaScript resource.
-The separate **Jarvis Ground Floor** card includes the Blender metre geometry,
-two independently movable/rotatable roomnodes and schematic radar sectors.
-Edit card to change poses and hardware mappings, then save Lovelace to persist.
-Kantoor/Keuken start at approximate annotated positions; height is unknown.
-Live HA targets require dimension, pose and hardware-axis confirmations.
-Ceiling mounting is recorded but ceiling/tilted projection is suppressed.
-
-See [geometry provenance, image registration, configuration and calibration](docs/floorplan.md).
-The existing radar card and its polygon-write behavior are unchanged. No HA
-installation or device settings are altered by adding this source feature.
+The integrated floorplan retains the reviewed Blender metre geometry and
+independent Kantoor/Keuken placements from PR #4. Source discovery, visual
+calibration and movement are documented in [Integrated floorplan](docs/integrated-floorplan.md).
+For the original model registration and evidence, see the explicitly historical
+[PR #4 prototype record](docs/floorplan.md). Follow [Migration](docs/migration.md)
+before removing individual radar cards. No live dashboard or resource is rewritten.
