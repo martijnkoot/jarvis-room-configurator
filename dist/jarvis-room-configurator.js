@@ -684,7 +684,7 @@ JarvisFloorplanCard.prototype._render=function(){
   svg.querySelector('[data-zone-preview]')?.remove();const g=this._node(svg,'g',{'data-zone-preview':'true'});
   if(!supported)return;
   const points=(this._zoneDraft||[]).map(p=>floorToMap(floorProject(c.s,c.h,...p)));
-  this._node(g,'polyline',{points:points.map(p=>p.join(',')).join(' '),fill:'#0ea5e9','fill-opacity':.15,stroke:'#0284c7','stroke-width':3,'vector-effect':'non-scaling-stroke','pointer-events':'none'});
+  this._node(g,!this._drawingZone&&points.length>=3?'polygon':'polyline',{points:points.map(p=>p.join(',')).join(' '),fill:'#0ea5e9','fill-opacity':.15,stroke:'#0284c7','stroke-width':3,'vector-effect':'non-scaling-stroke','pointer-events':'none'});
   if(this._zoneInteraction)points.forEach(([cx,cy],i)=>this._node(g,'circle',{cx,cy,r:.045,fill:i===this._vertex?'#f59e0b':'white',stroke:'#0284c7','stroke-width':12,'vector-effect':'non-scaling-stroke','data-zone-vertex':i}));
  };draw();
  // Handle remains on the main canvas; properties never open a modal sidebar.
@@ -697,7 +697,8 @@ JarvisFloorplanCard.prototype._render=function(){
   // SVG touch dispatch may target the SVG rather than a small circle. Resolve
   // nearest handles in screen pixels so zoom never shrinks the touch target.
   const nearest=selector=>{let best=null,distance=23;for(const n of svg.querySelectorAll(selector)){const q=new DOMPoint(+n.getAttribute('cx'),+n.getAttribute('cy')).matrixTransform(svg.getScreenCTM()),d=Math.hypot(q.x-e.clientX,q.y-e.clientY);if(d<distance){best=n;distance=d;}}return best;};
-  const v=this._zoneInteraction?(nearest('[data-zone-vertex]')||path.find(n=>n.dataset?.zoneVertex!==undefined)):null,rotate=!this._zoneInteraction&&(nearest('[data-live-rotate]')||path.find(n=>n.dataset?.liveRotate)),sensor=path.find(n=>n.dataset?.sensor)||(!this._zoneInteraction&&nearest('[data-sensor] circle:not(.selection)')?.parentNode);
+  const hit=!this._zoneInteraction&&(path.find(n=>n.dataset?.liveRotate)||path.find(n=>n.dataset?.sensor)||nearest('[data-live-rotate],[data-sensor] circle:not(.selection)'));
+  const v=this._zoneInteraction?(nearest('[data-zone-vertex]')||path.find(n=>n.dataset?.zoneVertex!==undefined)):null,rotate=hit?.dataset?.liveRotate?hit:null,sensor=hit?(hit.dataset?.sensor?hit:hit.closest?.('[data-sensor]')):null;
   if(v){this._vertex=+v.dataset.zoneVertex;this._gesture={vertex:this._vertex};}
   else if(path.some(n=>n.dataset?.zoneKey)&&!this._drawingZone){const z=path.find(n=>n.dataset?.zoneKey);if(!window.confirm('Zonepreview verwerpen en deze zone selecteren?'))return;this._selectedSensor=z.dataset.zoneSensor;this._zoneKey=z.dataset.zoneKey;this._loadZone();this._render();return;}
   else if((rotate||sensor)&&!this._zoneInteraction){const id=rotate?.dataset.liveRotate||sensor.dataset.sensor;if(id!==this._selectedSensor){if((this._zoneDraft?.length||0)&&!window.confirm('Zonepreview verwerpen en sensor selecteren?'))return;this._selectedSensor=id;this._loadZone();this._render();return;}this._gesture={rotate:!!rotate,dx:c.s.x-p[0],dy:c.s.y-p[1]};}

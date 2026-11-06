@@ -56,7 +56,7 @@ const pause=()=>new Promise(r=>setTimeout(r,100));
    };
    const liveBefore=await evaluate('JSON.stringify(window.liveTest.card._config.placements[0])');
    await liveDrag('[data-sensor=kantoor] circle:not(.selection)');
-   if(await evaluate('JSON.stringify(window.liveTest.card._config.placements[0])')===liveBefore)throw Error('Live sensor drag failed');
+   if(await evaluate('window.liveTest.card._config.placements[0].x')===JSON.parse(liveBefore).x)throw Error('Live sensor drag failed');
    const yaw=await evaluate('window.liveTest.card._config.placements[0].yaw');
    await liveDrag('[data-live-rotate]');
    if(await evaluate('window.liveTest.card._config.placements[0].yaw')===yaw)throw Error('Live rotation failed');
